@@ -175,27 +175,27 @@ namespace DevJobParser.Parsers
             };
         }
 
-        public List<JobCard> GetJobCardList()
+        public async Task<List<JobCard>> GetJobCardList(CancellationToken cancellationToken)
         {
-            List<string> parsedJobLinkList = GetJobLinksFromSearchLink();
-            List<JobCard> parsedJobDetailsList = GetJobDetailsList(parsedJobLinkList);
+            List<string> parsedJobLinkList = await GetJobLinksFromSearchLink(cancellationToken);
+            List<JobCard> parsedJobDetailsList = await GetJobDetailsList(parsedJobLinkList, cancellationToken);
 
             return parsedJobDetailsList;
         }
 
-        private List<string> GetJobLinksFromSearchLink()
+        private async Task<List<string>> GetJobLinksFromSearchLink(CancellationToken cancellationToken)
         {
             int currentPageNumber = 1;
             var parsedJobLinkList = new List<string>();
 
             while(true)
             {
-                List<string>? jobLinkListOnCurrentPage = GetJobLinkListOnPage(currentPageNumber);
+                cancellationToken.ThrowIfCancellationRequested();
+                List<string>? jobLinkListOnCurrentPage = await GetJobLinkListOnPage(currentPageNumber, cancellationToken);
 
                 Console.WriteLine("Parsed page: " + currentPageNumber);
 
-                currentPageNumber++;
-                Thread.Sleep(1000);
+                await Task.Delay(1000, cancellationToken);
 
                 if (jobLinkListOnCurrentPage is null)
                 {
@@ -203,14 +203,15 @@ namespace DevJobParser.Parsers
                 }
 
                 parsedJobLinkList.AddRange(jobLinkListOnCurrentPage);
+                currentPageNumber++;
             }
 
             return parsedJobLinkList;
         }
 
-        private List<string?>? GetJobLinkListOnPage(int pageNumber)
+        private async Task<List<string?>?> GetJobLinkListOnPage(int pageNumber, CancellationToken cancellationToken)
         {
-            var htmlPage = _httpClient.GetStringAsync(SearchLink + pageNumber).Result;
+            var htmlPage = await _httpClient.GetStringAsync(SearchLink + pageNumber, cancellationToken);
             var htmlDocumentObject = _htmlParser.ParseDocument(htmlPage);
 
             if (!_jobLinkSelector.TryGetValue("JobLink", out var linkRule))
@@ -230,14 +231,14 @@ namespace DevJobParser.Parsers
             return rawLinks.Select(link => "https://www.work.ua" + link).ToList();
         }
 
-        private List<JobCard> GetJobDetailsList(List<string> parsedJobLinkList)
+        private async Task<List<JobCard>> GetJobDetailsList(List<string> parsedJobLinkList, CancellationToken cancellationToken)
         {
-            var parsedJobDetailsList = new List<JobCard>();
-
-            foreach (var parsedJobLink in parsedJobLinkList)
+            var parsingTasks = parsedJobLinkList.Select(async parsedJobLink =>
             {
-                var pageHtml = _httpClient.GetStringAsync(parsedJobLink).Result;
-
+                cancellationToken.ThrowIfCancellationRequested();
+                try
+                {
+                var pageHtml = await _httpClient.GetStringAsync(parsedJobLink, cancellationToken);
                 var angleHtmlDocument = _htmlParser.ParseDocument(pageHtml);
 
                 // Main fields
@@ -248,7 +249,7 @@ namespace DevJobParser.Parsers
 
                 if (jobTitle is null || jobCompanyName is null || jobDescription is null)
                 {
-                    throw new Exception("Main fields not parsed");
+                    return null;
                 }
 
                 // Additional fields
@@ -267,7 +268,7 @@ namespace DevJobParser.Parsers
                     { "tagsOfSkills", jobTagsOfSkills }
                 };
 
-                var workUaJobCard = new JobCard()
+                return new JobCard()
                 {
                     Url = parsedJobLink,
                     Title = jobTitle,
@@ -277,10 +278,23 @@ namespace DevJobParser.Parsers
                     AdditionalDetails = additionalDetails,
                 };
 
-                parsedJobDetailsList.Add(workUaJobCard);
-            }
+                }
+                catch(HttpRequestException ex)
+                {
+                    Console.WriteLine($"Ошибка при запросе {parsedJobLink}: {ex.Message}");
+                    return null;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Ошибка при парсинге {parsedJobLink}: {ex.Message}");
+                    return null;
+                }
 
-            return parsedJobDetailsList;
+            }).ToList();
+
+            var jobCards = await Task.WhenAll(parsingTasks);
+
+            return jobCards.ToList();
         }
 
         private string? GetDataFromHtmlTag(IHtmlDocument angleHtmlDocument, ParsingRule parsingRule)
