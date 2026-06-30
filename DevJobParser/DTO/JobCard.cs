@@ -6,12 +6,13 @@ namespace DevJobParser.DTO
 {
     public class JobCard
     {
-        public string Url { get; init; }
-        public string Title { get; init; }
-        public string Company { get; init; }
-        public string Salary { get; init; }
-        public string Description { get; init; }
+        public required string Url { get; set; }
+        public required string Title { get; set; }
+        public required string Company { get; set; }
+        public string? Salary { get; set; }
+        public required string Description { get; set; }
 
-        public Dictionary<string, string> AdditionalDetails { get; init; }
+        public Dictionary<string, string?>? AdditionalDetails { get; set; }
+        public JobCard() { }
     }
 }

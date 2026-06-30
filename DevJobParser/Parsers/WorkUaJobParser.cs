@@ -2,42 +2,182 @@
 using AngleSharp.Html.Dom;
 using AngleSharp.Html.Parser;
 using DevJobParser.DTO;
+using DevJobParser.Parsers;
 
 namespace DevJobParser.Parsers
 {
+    public interface IHtmlTagGetData
+    {
+        string? RetrieveData(IElement element);
+        List<string?>? RetrieveData(IHtmlCollection<IElement> elements);
+    }
 
+    public class HtmlTagGetText : IHtmlTagGetData
+    {
+        public string? RetrieveData(IElement element)
+        {
+            if(element == null)
+            {
+                return null;
+            }
+
+            var cleanedText = element.Text().Trim();
+
+            return cleanedText;
+        }
+
+        public List<string?>? RetrieveData(IHtmlCollection<IElement> elements)
+        {
+            if (elements is null || elements.Length == 0)
+                return null;
+
+            List<string?>? result = new List<string?>();
+
+            foreach (var element in elements)
+            {
+                var data = RetrieveData(element);
+                result.Add(data);
+            }
+
+            return result;
+        }
+    }
+
+    public class HtmlTagGetAttribute : IHtmlTagGetData
+    {
+        private readonly string _attributeName;
+
+        public HtmlTagGetAttribute(string attributeName)
+        {
+            _attributeName = attributeName;
+        }
+
+        public string? RetrieveData(IElement element)
+        {
+            return element?.GetAttribute(_attributeName);
+        }
+
+        public List<string?>? RetrieveData(IHtmlCollection<IElement> elements)
+        {
+            if (elements is null || elements.Length == 0)
+                return null;
+            
+            List<string?>? result = new List<string?>();
+
+            foreach (var element in elements)
+            {
+                var data = RetrieveData(element);
+                result.Add(data);
+            }
+
+            return result;
+        }
+    }
+
+    public class ParsingRule
+    {
+        public string Selector { get; init; } = string.Empty;
+        public IHtmlTagGetData Strategy { get; init; } = null!;
+    }
 
     public class WorkUaJobParser
     {
-        private readonly HttpClient _httpClient = new HttpClient();
+        private readonly HttpClient _httpClient = new();
         private readonly HtmlParser _htmlParser = new();
         public string SearchLink { get; private set; }
 
-        private readonly string _jobLinkSelector;
+        private readonly Dictionary<string, ParsingRule> _jobLinkSelector;
 
-        private readonly Dictionary<string, string> _jobDetailSelectors;
+        private readonly Dictionary<string, ParsingRule> _jobDetailSelectors;
 
         public WorkUaJobParser(string searchLink)
         {
             SearchLink = searchLink;
-            _jobLinkSelector = "div#pjax-jobs-list > div.card h2 > a";
-            _jobDetailSelectors = new Dictionary<string, string>()
+            _jobLinkSelector = new Dictionary<string, ParsingRule>()
             {
-                { "jobTitle", "div.card h1" },
-                { "jobCompanyName", "div.card ul li span.glyphicon-company + a span" },
-                { "jobSalary", "div.card div.wordwrap > div.row + ul > li span[title=\"Зарплата\"] + span" },
-                { "jobDescription", "div.card div.company-description" },
-                { "jobPlaceOfWork", "div.card div.wordwrap > div.row + ul > li:has(span[title=\"Місце роботи\"])" },
-                { "jobTermsAndConditions", "div.card div.wordwrap > div.row + ul > li:has(span[title=\"Умови й вимоги\"])" },
-                { "jobLanguageKnowladge", "div.card div.wordwrap > div.row + ul > li:has(span[title=\"Знання мов\"])" },
-                { "jobTagsOfSkillsCollection", "div.card div.wordwrap > ul + div > ul > li > span" },
+                {
+                    "JobLink",
+                    new ParsingRule
+                    {
+                        Selector = "div#pjax-jobs-list > div.card h2 > a",
+                        Strategy = new HtmlTagGetAttribute("href")
+                    }
+                }
+            };
+
+            _jobDetailSelectors = new Dictionary<string, ParsingRule>()
+            {
+                {
+                    "jobTitle",
+                    new ParsingRule
+                    {
+                        Selector = "div.card h1",
+                        Strategy = new HtmlTagGetText()
+                    }
+                },
+                {
+                    "jobCompanyName",
+                    new ParsingRule
+                    {
+                        Selector = "div.card ul li span.glyphicon-company + a span",
+                        Strategy = new HtmlTagGetText()
+                    }
+                },
+                {
+                    "jobSalary",
+                    new ParsingRule
+                    {
+                        Selector = "div.card div.wordwrap > div.row + ul > li span[title=\"Зарплата\"] + span",
+                        Strategy = new HtmlTagGetText()
+                    }
+                },
+                {
+                    "jobDescription",
+                    new ParsingRule
+                    {
+                        Selector = "div.card div.company-description",
+                        Strategy = new HtmlTagGetText()
+                    }
+                },
+                {
+                    "jobPlaceOfWork",
+                    new ParsingRule
+                    {
+                        Selector =
+                        "div.card div.wordwrap > div.row + ul > li:has(span[title=\"Місце роботи\"])",
+                        Strategy = new HtmlTagGetText()
+                    }
+                },
+                {
+                    "jobTermsAndConditions",
+                    new ParsingRule
+                    {
+                        Selector = "div.card div.wordwrap > div.row + ul > li:has(span[title=\"Умови й вимоги\"])",
+                        Strategy = new HtmlTagGetText()
+                    }
+                },
+                {
+                    "jobLanguageKnowladge",
+                    new ParsingRule
+                    {
+                        Selector = "div.card div.wordwrap > div.row + ul > li:has(span[title=\"Знання мов\"])",
+                        Strategy = new HtmlTagGetText()
+                    }
+                },
+                {
+                    "jobTagsOfSkillsCollection",
+                    new ParsingRule
+                    {
+                        Selector = "div.card div.wordwrap > ul + div > ul > li > span",
+                        Strategy = new HtmlTagGetText()
+                    }
+                },
             };
         }
 
         public List<JobCard> GetJobCardList()
         {
             List<string> parsedJobLinkList = GetJobLinksFromSearchLink();
-
             List<JobCard> parsedJobDetailsList = GetJobDetailsList(parsedJobLinkList);
 
             return parsedJobDetailsList;
@@ -46,46 +186,48 @@ namespace DevJobParser.Parsers
         private List<string> GetJobLinksFromSearchLink()
         {
             int currentPageNumber = 1;
-
             var parsedJobLinkList = new List<string>();
 
-            List<string>? jobLinkListOnCurrentPage;
-
-            do
+            while(true)
             {
-                jobLinkListOnCurrentPage = GetJobLinkListOnPage(currentPageNumber);
+                List<string>? jobLinkListOnCurrentPage = GetJobLinkListOnPage(currentPageNumber);
 
                 Console.WriteLine("Parsed page: " + currentPageNumber);
 
                 currentPageNumber++;
                 Thread.Sleep(1000);
 
-            } while (jobLinkListOnCurrentPage != null);
+                if (jobLinkListOnCurrentPage is null)
+                {
+                    break;
+                }
+
+                parsedJobLinkList.AddRange(jobLinkListOnCurrentPage);
+            }
 
             return parsedJobLinkList;
         }
 
-        private List<string>? GetJobLinkListOnPage(int pageNumber)
+        private List<string?>? GetJobLinkListOnPage(int pageNumber)
         {
-            var pageHtml = _httpClient.GetStringAsync(SearchLink + pageNumber).Result;
+            var htmlPage = _httpClient.GetStringAsync(SearchLink + pageNumber).Result;
+            var htmlDocumentObject = _htmlParser.ParseDocument(htmlPage);
 
-            var angleHtmlDocument = _htmlParser.ParseDocument(pageHtml);
+            if (!_jobLinkSelector.TryGetValue("JobLink", out var linkRule))
+            {
+                throw new Exception("Правило для парсинга \'JobLink\' не настроено в словаре!");
+            }
 
-            var jobLinkCollectionOnCurrentPage = angleHtmlDocument.QuerySelectorAll(_jobLinkSelector);
+            var htmlJobLinksOnPage = htmlDocumentObject.QuerySelectorAll(linkRule.Selector);
 
-            if (jobLinkCollectionOnCurrentPage is null || jobLinkCollectionOnCurrentPage.Length == 0)
+            if (htmlJobLinksOnPage.Length == 0)
             {
                 return null;
             }
 
-            var parsedJobLinkList = new List<string>();
+            List<string?>? rawLinks = linkRule.Strategy.RetrieveData(htmlJobLinksOnPage);
 
-            foreach (var jobLink in jobLinkCollectionOnCurrentPage)
-            {
-                parsedJobLinkList.Add("https://www.work.ua" + jobLink.GetAttribute("href"));
-            }
-
-            return parsedJobLinkList;
+            return rawLinks.Select(link => "https://www.work.ua" + link).ToList();
         }
 
         private List<JobCard> GetJobDetailsList(List<string> parsedJobLinkList)
@@ -99,20 +241,25 @@ namespace DevJobParser.Parsers
                 var angleHtmlDocument = _htmlParser.ParseDocument(pageHtml);
 
                 // Main fields
-                var jobTitle = GetCleanTextFromSelector(angleHtmlDocument, _jobDetailSelectors["jobTitle"]);
-                var jobCompanyName = GetCleanTextFromSelector(angleHtmlDocument, _jobDetailSelectors["jobCompanyName"]);
-                var jobSalary = GetCleanTextFromSelector(angleHtmlDocument, _jobDetailSelectors["jobSalary"]);
-                var jobDescription = GetCleanTextFromSelector(angleHtmlDocument, _jobDetailSelectors["jobDescription"]);
+                string jobTitle = GetDataFromHtmlTag(angleHtmlDocument, _jobDetailSelectors["jobTitle"]);
+                string jobCompanyName = GetDataFromHtmlTag(angleHtmlDocument, _jobDetailSelectors["jobCompanyName"]);
+                string? jobSalary = GetDataFromHtmlTag(angleHtmlDocument, _jobDetailSelectors["jobSalary"]);
+                string jobDescription = GetDataFromHtmlTag(angleHtmlDocument, _jobDetailSelectors["jobDescription"]);
+
+                if (jobTitle is null || jobCompanyName is null || jobDescription is null)
+                {
+                    throw new Exception("Main fields not parsed");
+                }
 
                 // Additional fields
-                var jobPlaceOfWork = GetCleanTextFromSelector(angleHtmlDocument, _jobDetailSelectors["jobPlaceOfWork"]);
-                var jobTermsAndConditions = GetCleanTextFromSelector(angleHtmlDocument, _jobDetailSelectors["jobTermsAndConditions"]);
-                var jobLanguageKnowladge = GetCleanTextFromSelector(angleHtmlDocument, _jobDetailSelectors["jobLanguageKnowladge"]);
+                string? jobPlaceOfWork = GetDataFromHtmlTag(angleHtmlDocument, _jobDetailSelectors["jobPlaceOfWork"]);
+                string? jobTermsAndConditions = GetDataFromHtmlTag(angleHtmlDocument, _jobDetailSelectors["jobTermsAndConditions"]);
+                string? jobLanguageKnowladge = GetDataFromHtmlTag(angleHtmlDocument, _jobDetailSelectors["jobLanguageKnowladge"]);
 
-                var jobTagsOfSkillsCollection = GetCleanTextListFromSelector(angleHtmlDocument, _jobDetailSelectors["jobTagsOfSkillsCollection"]);
-                var jobTagsOfSkills = GetStringFromTextList(jobTagsOfSkillsCollection);
+                List<string?>? jobTagsOfSkillsCollection = GetDataFromHtmlTags(angleHtmlDocument, _jobDetailSelectors["jobTagsOfSkillsCollection"]);
+                string? jobTagsOfSkills = GetStringFromTextList(jobTagsOfSkillsCollection);
 
-                var additionalDetails = new Dictionary<string, string>()
+                var additionalDetails = new Dictionary<string, string?>()
                 {
                     { "placeOfWork", jobPlaceOfWork },
                     { "termsAndConditions", jobTermsAndConditions },
@@ -136,46 +283,35 @@ namespace DevJobParser.Parsers
             return parsedJobDetailsList;
         }
 
-        private string GetCleanTextFromSelector(IHtmlDocument angleHtmlDocument, string selector)
+        private string? GetDataFromHtmlTag(IHtmlDocument angleHtmlDocument, ParsingRule parsingRule)
         {
-            var rawText = GetTextFromSelector(angleHtmlDocument, selector);
+            var htmlElement = angleHtmlDocument?.QuerySelector(parsingRule.Selector);
 
-            if (rawText == null)
-            {
-                return "Інформація відсутня";
-            }
+            if (htmlElement is null)
+                return null;
 
-            var cleanedText = CleanWhiteSpaces(rawText);
-            
-            return cleanedText;
+            var data = parsingRule.Strategy.RetrieveData(htmlElement);
+
+            return data;
         }
 
-        private string? GetTextFromSelector(IHtmlDocument angleHtmlDocument, string selector)
+        private List<string?>? GetDataFromHtmlTags(IHtmlDocument angleHtmlDocument, ParsingRule parsingRule)
         {
-            return angleHtmlDocument?.QuerySelector(selector)?.Text();
+            var htmlElementCollection = angleHtmlDocument?.QuerySelectorAll(parsingRule.Selector);
+
+            if (htmlElementCollection is null)
+                return null;
+
+            var dataList = parsingRule.Strategy.RetrieveData(htmlElementCollection);
+
+            return dataList;
         }
 
-        private List<string> GetCleanTextListFromSelector(IHtmlDocument angleHtmlDocument, string selector)
+        private string? GetStringFromTextList(List<string?>? textCollection)
         {
-            var htmlElementCollection = angleHtmlDocument?.QuerySelectorAll(selector);
-
-            var textList = new List<string>();
-
-            foreach (var htmlElement in htmlElementCollection)
+            if (textCollection is null || textCollection.Count == 0 )
             {
-                var cleanedText = CleanWhiteSpaces(htmlElement.Text());
-
-                textList.Add(cleanedText);
-            }
-
-            return textList;
-        }
-
-        private string GetStringFromTextList(List<string> textCollection)
-        {
-            if (textCollection.Count == 0 || textCollection is null)
-            {
-                return "Інформація відсутня";
+                return null;
             }
 
             string joinedTextCollection = "";
@@ -191,11 +327,6 @@ namespace DevJobParser.Parsers
             }
 
             return joinedTextCollection;
-        }
-
-        private string CleanWhiteSpaces(string text)
-        {
-            return text.Trim();
         }
     }
 }
