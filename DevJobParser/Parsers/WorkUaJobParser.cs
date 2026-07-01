@@ -2,7 +2,9 @@
 using AngleSharp.Html.Dom;
 using AngleSharp.Html.Parser;
 using DevJobParser.DTO;
-using DevJobParser.Parsers;
+using Microsoft.Extensions.Logging;
+using Polly;
+using Polly.Retry;
 
 namespace DevJobParser.Parsers
 {
@@ -84,15 +86,29 @@ namespace DevJobParser.Parsers
     {
         private readonly HttpClient _httpClient = new();
         private readonly HtmlParser _htmlParser = new();
+        private readonly ILogger<WorkUaJobParser> _logger;
+        private readonly AsyncRetryPolicy _retryPolicy;
         public string SearchLink { get; private set; }
 
         private readonly Dictionary<string, ParsingRule> _jobLinkSelector;
 
         private readonly Dictionary<string, ParsingRule> _jobDetailSelectors;
 
-        public WorkUaJobParser(string searchLink)
+        public WorkUaJobParser(string searchLink, ILogger<WorkUaJobParser> logger)
         {
             SearchLink = searchLink;
+            _logger = logger;
+            _retryPolicy = Policy.Handle<HttpRequestException>().WaitAndRetryAsync(
+                retryCount:3,
+                sleepDurationProvider: retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
+                onRetry: (exception, timeSpan, retryCount, context) =>
+                {
+                    _logger.LogWarning(
+                        exception,
+                        $"Повторная попытка {retryCount} для URL: {context.ContainsKey("Url")}. Задержка {timeSpan.TotalSeconds} секунд. Ошибка: {exception.Message}"
+                    );
+                }
+            );
             _jobLinkSelector = new Dictionary<string, ParsingRule>()
             {
                 {
@@ -193,7 +209,7 @@ namespace DevJobParser.Parsers
                 cancellationToken.ThrowIfCancellationRequested();
                 List<string>? jobLinkListOnCurrentPage = await GetJobLinkListOnPage(currentPageNumber, cancellationToken);
 
-                Console.WriteLine("Parsed page: " + currentPageNumber);
+                _logger.LogInformation($"Parsed page: {currentPageNumber}");
 
                 await Task.Delay(1000, cancellationToken);
 
@@ -211,7 +227,23 @@ namespace DevJobParser.Parsers
 
         private async Task<List<string?>?> GetJobLinkListOnPage(int pageNumber, CancellationToken cancellationToken)
         {
-            var htmlPage = await _httpClient.GetStringAsync(SearchLink + pageNumber, cancellationToken);
+            string fullUrl = SearchLink + pageNumber;
+            string htmlPage;
+
+            try
+            {
+                htmlPage = await _retryPolicy.ExecuteAsync(async (context, ct) =>
+                {
+                    context["Url"] = fullUrl;
+                    return await _httpClient.GetStringAsync(fullUrl, ct);
+                }, new Context(), cancellationToken);
+            }
+            catch (HttpRequestException ex)
+            {
+                _logger.LogError(ex, "Не удалось получить HTML-страницу после нескольких попыток: {FullUrl}", fullUrl);
+                return null;
+            }
+
             var htmlDocumentObject = _htmlParser.ParseDocument(htmlPage);
 
             if (!_jobLinkSelector.TryGetValue("JobLink", out var linkRule))
@@ -238,14 +270,20 @@ namespace DevJobParser.Parsers
                 cancellationToken.ThrowIfCancellationRequested();
                 try
                 {
-                var pageHtml = await _httpClient.GetStringAsync(parsedJobLink, cancellationToken);
-                var angleHtmlDocument = _htmlParser.ParseDocument(pageHtml);
+
+                string htmlPage = await _retryPolicy.ExecuteAsync(async (context, ct) =>
+                {
+                    context["Url"] = parsedJobLink;
+                    return await _httpClient.GetStringAsync(parsedJobLink, ct);
+                }, new Context(), cancellationToken);
+
+                var angleHtmlDocument = _htmlParser.ParseDocument(htmlPage);
 
                 // Main fields
-                string jobTitle = GetDataFromHtmlTag(angleHtmlDocument, _jobDetailSelectors["jobTitle"]);
-                string jobCompanyName = GetDataFromHtmlTag(angleHtmlDocument, _jobDetailSelectors["jobCompanyName"]);
+                string? jobTitle = GetDataFromHtmlTag(angleHtmlDocument, _jobDetailSelectors["jobTitle"]);
+                string? jobCompanyName = GetDataFromHtmlTag(angleHtmlDocument, _jobDetailSelectors["jobCompanyName"]);
                 string? jobSalary = GetDataFromHtmlTag(angleHtmlDocument, _jobDetailSelectors["jobSalary"]);
-                string jobDescription = GetDataFromHtmlTag(angleHtmlDocument, _jobDetailSelectors["jobDescription"]);
+                string? jobDescription = GetDataFromHtmlTag(angleHtmlDocument, _jobDetailSelectors["jobDescription"]);
 
                 if (jobTitle is null || jobCompanyName is null || jobDescription is null)
                 {
@@ -281,12 +319,12 @@ namespace DevJobParser.Parsers
                 }
                 catch(HttpRequestException ex)
                 {
-                    Console.WriteLine($"Ошибка при запросе {parsedJobLink}: {ex.Message}");
+                    _logger.LogError(ex, "Не удалось получить или спарсить детали вакансии после нескольких попыток: {ParsedJobLink}", parsedJobLink);
                     return null;
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"Ошибка при парсинге {parsedJobLink}: {ex.Message}");
+                    _logger.LogError(ex, "Ошибка при парсинге деталей вакансии {ParsedJobLink}", parsedJobLink);
                     return null;
                 }
 
@@ -328,19 +366,7 @@ namespace DevJobParser.Parsers
                 return null;
             }
 
-            string joinedTextCollection = "";
-
-            foreach (var text in textCollection)
-            {
-                if (joinedTextCollection != "")
-                {
-                    joinedTextCollection += ", ";
-                }
-
-                joinedTextCollection += text;
-            }
-
-            return joinedTextCollection;
+            return string.Join(',',textCollection);
         }
     }
 }

@@ -11,7 +11,6 @@ namespace DevJobParser.DTO
         public required string Company { get; set; }
         public string? Salary { get; set; }
         public required string Description { get; set; }
-
         public Dictionary<string, string?>? AdditionalDetails { get; set; }
         public JobCard() { }
     }
