@@ -88,6 +88,7 @@ namespace DevJobParser.Parsers
         private readonly HtmlParser _htmlParser = new();
         private readonly ILogger<WorkUaJobParser> _logger;
         private readonly AsyncRetryPolicy _retryPolicy;
+        private readonly SemaphoreSlim _throttler;
         public string SearchLink { get; private set; }
 
         private readonly Dictionary<string, ParsingRule> _jobLinkSelector;
@@ -98,6 +99,8 @@ namespace DevJobParser.Parsers
         {
             SearchLink = searchLink;
             _logger = logger;
+            _throttler = new SemaphoreSlim(initialCount: 5);
+
             _retryPolicy = Policy.Handle<HttpRequestException>().WaitAndRetryAsync(
                 retryCount:3,
                 sleepDurationProvider: retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
@@ -105,10 +108,11 @@ namespace DevJobParser.Parsers
                 {
                     _logger.LogWarning(
                         exception,
-                        $"Повторная попытка {retryCount} для URL: {context.ContainsKey("Url")}. Задержка {timeSpan.TotalSeconds} секунд. Ошибка: {exception.Message}"
+                        $"Повторная попытка {retryCount} для URL: {context["Url"]}. Задержка {timeSpan.TotalSeconds} секунд. Ошибка: {exception.Message}"
                     );
                 }
             );
+
             _jobLinkSelector = new Dictionary<string, ParsingRule>()
             {
                 {
@@ -211,8 +215,6 @@ namespace DevJobParser.Parsers
 
                 _logger.LogInformation($"Parsed page: {currentPageNumber}");
 
-                await Task.Delay(1000, cancellationToken);
-
                 if (jobLinkListOnCurrentPage is null)
                 {
                     break;
@@ -268,6 +270,8 @@ namespace DevJobParser.Parsers
             var parsingTasks = parsedJobLinkList.Select(async parsedJobLink =>
             {
                 cancellationToken.ThrowIfCancellationRequested();
+
+                await _throttler.WaitAsync(cancellationToken);
                 try
                 {
 
@@ -327,6 +331,10 @@ namespace DevJobParser.Parsers
                     _logger.LogError(ex, "Ошибка при парсинге деталей вакансии {ParsedJobLink}", parsedJobLink);
                     return null;
                 }
+                finally
+                {
+                    _throttler.Release();
+                }
 
             }).ToList();
 
@@ -366,7 +374,7 @@ namespace DevJobParser.Parsers
                 return null;
             }
 
-            return string.Join(',',textCollection);
+            return string.Join(", ",textCollection);
         }
     }
 }
