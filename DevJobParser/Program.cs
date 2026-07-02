@@ -1,6 +1,8 @@
 ﻿using DevJobParser.DTO;
 using DevJobParser.Parsers;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.DependencyInjection;
+using AngleSharp.Html.Parser;
 
 namespace DevJobParser
 {
@@ -8,7 +10,9 @@ namespace DevJobParser
     {
         static async Task Main(string[] args)
         {
-            using var loggerFactory = LoggerFactory.Create(builder =>
+            var services = new ServiceCollection();
+
+            services.AddLogging(builder =>
             {
                 builder.AddFilter("Microsoft", LogLevel.Warning);
                 builder.AddFilter("System", LogLevel.Warning);
@@ -16,8 +20,20 @@ namespace DevJobParser
                 builder.AddDebug();
             });
 
-            ILogger<WorkUaJobParser> workUaLogger = loggerFactory.CreateLogger<WorkUaJobParser>();
-            ILogger<Program> programLogger = loggerFactory.CreateLogger<Program>();
+            services.AddSingleton<HttpClient>();
+            services.AddSingleton<HtmlParser>();
+            services.AddSingleton<WorkUaHtmlLoader>();
+            services.AddSingleton<WorkUaJobLinkParser>();
+            services.AddSingleton<WorkUaJobDetailsParser>();
+            services.AddSingleton<WorkUaJobParser>();
+            services.Configure<WorkUaParserOptions>(options =>
+            {
+                options.SearchLink = "https://www.work.ua/jobs-remote-it-.net/?days=124&page=";
+            });
+
+            var serviceProvider = services.BuildServiceProvider();
+
+            var programLogger = serviceProvider.GetRequiredService<ILogger<Program>>();
 
             using CancellationTokenSource cts = new CancellationTokenSource();
 
@@ -25,7 +41,7 @@ namespace DevJobParser
             {
                 programLogger.LogInformation("Парсинг Work.ua начат.");
 
-                var workUaParser = new WorkUaJobParser("https://www.work.ua/jobs-remote-it-.net/?days=124&page=", workUaLogger);
+                var workUaParser = serviceProvider.GetRequiredService<WorkUaJobParser>();
                 List<JobCard> jobCards = await workUaParser.GetJobCardList(cts.Token);
 
                 programLogger.LogInformation($"Парсинг завершен. Найдено {jobCards.Count} вакансий.");
@@ -34,9 +50,13 @@ namespace DevJobParser
             {
                 programLogger.LogWarning("Операция парсинга была отменена.");
             }
-            catch (Exception ex)
+            catch (HtmlPageLoadingException ex)
             {
-                programLogger.LogError(ex, "Произошла непредсказуемая ошибка в Program.cs");
+                programLogger.LogError(ex, $"Ошибка загрузки HTML-страницы по URL: {ex.Url}");
+            }
+            catch (JobParsingException ex)
+            {
+                programLogger.LogError(ex, $"Ошибка парсинга вакансии по URL: {ex.JobUrl}");
             }
         }
     }
