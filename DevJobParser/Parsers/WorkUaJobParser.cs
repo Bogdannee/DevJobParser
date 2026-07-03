@@ -1,4 +1,5 @@
 ﻿using System.Net.NetworkInformation;
+using System.Web;
 using AngleSharp.Dom;
 using AngleSharp.Html.Dom;
 using AngleSharp.Html.Parser;
@@ -27,7 +28,7 @@ namespace DevJobParser.Parsers
 
             var cleanedText = element.Text().Trim();
 
-            return cleanedText;
+            return string.IsNullOrWhiteSpace(cleanedText) ? null : cleanedText;
         }
 
         public List<string?>? RetrieveData(IHtmlCollection<IElement> elements)
@@ -147,14 +148,18 @@ namespace DevJobParser.Parsers
         {
             _httpClient = httpClient;
             _logger = logger;
-            _retryPolicy = Policy.Handle<HttpRequestException>().WaitAndRetryAsync(
+            _retryPolicy = Policy.Handle<HttpRequestException>(ex =>
+                ex.StatusCode == null ||
+                (int)ex.StatusCode >= 500 ||
+                ex.StatusCode == System.Net.HttpStatusCode.TooManyRequests
+            ).WaitAndRetryAsync(
                 retryCount:3,
                 sleepDurationProvider: retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
                 onRetry: (exception, timeSpan, retryCount, context) =>
                 {
                     _logger.LogWarning(
                         exception,
-                        $"Повторная попытка {retryCount} для URL: {context["Url"]}. Задержка {timeSpan.TotalSeconds} секунд. Ошибка: {exception.Message}"
+                        $"Retry {retryCount} for URL: {context["Url"]}. Delaying for {timeSpan.TotalSeconds} seconds. Error: {exception.Message}"
                     );
                 }
             );
@@ -173,7 +178,7 @@ namespace DevJobParser.Parsers
             }
             catch (HttpRequestException ex)
             {
-                _logger.LogError(ex, "Не удалось получить HTML-страницу после нескольких попыток: {url}", url);
+                _logger.LogError(ex, "Failed to load HTML page after several retries: {url}", url);
                 throw new HtmlPageLoadingException(url, ex.Message, ex);
             }
             
@@ -206,19 +211,19 @@ namespace DevJobParser.Parsers
             };
         }
 
-        public async Task<List<string>> GetJobLinksFromSearchLink(string searchLink, CancellationToken cancellationToken)
+        public async Task<List<string>> GetJobLinksFromSearchLink(string searchLink, int maxPages, CancellationToken cancellationToken)
         {
-            int currentPageNumber = 1;
             var parsedJobLinkList = new List<string>();
 
-            while(true)
+            for (int currentPageNumber = 1; currentPageNumber <= maxPages; currentPageNumber++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                List<string?>? jobLinkListOnCurrentPage;
+                List<string>? jobLinkListOnCurrentPage;
 
                 try
                 {
-                    jobLinkListOnCurrentPage = await GetJobLinkListOnPage(searchLink + currentPageNumber, cancellationToken);
+                    var currentPageUrl = BuildUrlWithPage(searchLink, currentPageNumber);
+                    jobLinkListOnCurrentPage = await GetJobLinkListOnPage(currentPageUrl, cancellationToken);
                 }
                 catch (HtmlPageLoadingException ex)
                 {
@@ -234,7 +239,6 @@ namespace DevJobParser.Parsers
                 }
 
                 parsedJobLinkList.AddRange(jobLinkListOnCurrentPage);
-                currentPageNumber++;
 
                 await Task.Delay(500, cancellationToken);
             }
@@ -250,7 +254,7 @@ namespace DevJobParser.Parsers
 
             if (!_jobLinkSelector.TryGetValue("JobLink", out var linkRule))
             {
-                throw new JobParsingException(searchLink, "Правило для парсинга \'JobLink\' не настроено в словаре!");
+                throw new JobParsingException(searchLink, "Parsing rule for 'JobLink' is not configured in the dictionary!");
             }
 
             var htmlJobLinksOnPage = htmlDocumentObject.QuerySelectorAll(linkRule.Selector);
@@ -262,7 +266,25 @@ namespace DevJobParser.Parsers
 
             var jobLinks = linkRule.Strategy.RetrieveData(htmlJobLinksOnPage);
 
-            return jobLinks.Where(link => link is not null).Select(link => link!).ToList();;
+            return jobLinks.Where(link => link is not null).Select(link => link!).ToList();
+        }
+
+        private string BuildUrlWithPage(string baseSearchLink, int pageNumber)
+        {
+            try
+            {
+                var uriBuilder = new UriBuilder(baseSearchLink);
+                var queryParams = System.Web.HttpUtility.ParseQueryString(uriBuilder.Query);
+                
+                queryParams["page"] = pageNumber.ToString();
+                uriBuilder.Query = queryParams.ToString();
+                
+                return uriBuilder.ToString();
+            }
+            catch (UriFormatException)
+            {
+                throw new ArgumentException($"Invalid base search link format: {baseSearchLink}");
+            }
         }
     }
 
@@ -410,17 +432,17 @@ namespace DevJobParser.Parsers
             }
             catch(HtmlPageLoadingException ex)
             {
-                _logger.LogError(ex, "Не удалось получить детали вакансии после нескольких попыток: {ParsedJobLink}", parsedJobLink);
+                _logger.LogError(ex, "Failed to retrieve or parse job details after several retries: {ParsedJobLink}", parsedJobLink);
                 return null;
             }
             catch (JobParsingException ex)
             {
-                _logger.LogWarning(ex, "Пропущена вакансия с неполными данными: {ParsedJobLink}", parsedJobLink);
+                _logger.LogWarning(ex, "A vacancy with incomplete data was missed: {ParsedJobLink}", parsedJobLink);
                 return null;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Ошибка при парсинге деталей вакансии {ParsedJobLink}", parsedJobLink);
+                _logger.LogError(ex, "Error occurred while parsing job details for link: {ParsedJobLink}", parsedJobLink);
                 return null;
             }
             finally
@@ -474,6 +496,8 @@ namespace DevJobParser.Parsers
         private readonly WorkUaJobLinkParser _workUaJobLinkParser;
         private readonly WorkUaJobDetailsParser _workUaJobDetailsParser;
         private readonly string _searchlink;
+        private readonly int _maxPages;
+
 
         public WorkUaJobParser(
             WorkUaJobLinkParser workUaJobLinkParser,
@@ -483,11 +507,12 @@ namespace DevJobParser.Parsers
             _workUaJobLinkParser = workUaJobLinkParser;
             _workUaJobDetailsParser = workUaJobDetailsParser;
             _searchlink = options.Value.SearchLink;
+            _maxPages = options.Value.MaxPages;
         }
 
         public async Task<List<JobCard>> GetJobCardList(CancellationToken cancellationToken)
         {
-            List<string> parsedJobLinkList = await _workUaJobLinkParser.GetJobLinksFromSearchLink(_searchlink, cancellationToken);
+            List<string> parsedJobLinkList = await _workUaJobLinkParser.GetJobLinksFromSearchLink(_searchlink, _maxPages, cancellationToken);
             List<JobCard> parsedJobDetailsList = await _workUaJobDetailsParser.GetJobDetailsList(parsedJobLinkList, cancellationToken);
 
             return parsedJobDetailsList;
@@ -497,5 +522,6 @@ namespace DevJobParser.Parsers
     public class WorkUaParserOptions
     {
         public string SearchLink { get; set; } = string.Empty;
+        public int MaxPages { get; set; } = 50;
     }
 }

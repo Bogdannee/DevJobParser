@@ -37,44 +37,52 @@ namespace DevJobParser
             services.AddSingleton<WorkUaJobParser>();
             services.Configure<WorkUaParserOptions>(options =>
             {
-                options.SearchLink = "https://www.work.ua/jobs-remote-it-.net/?days=124&page=";
+                options.SearchLink = "https://www.work.ua/jobs-remote-it-.net/";
+                options.MaxPages = 50;
             });
             using var serviceProvider = services.BuildServiceProvider();
 
             var programLogger = serviceProvider.GetRequiredService<ILogger<Program>>();
 
             using CancellationTokenSource cts = new CancellationTokenSource(TimeSpan.FromMinutes(5));
+            var manuallyCancelled = false;
             Console.CancelKeyPress +=(sender, eventArgs) =>
             {
                 eventArgs.Cancel = true;
-                programLogger.LogWarning("Отмена выполнения (Ctrl+C). Завершение работы парсера...");
+                programLogger.LogWarning("Cancellation requested (Ctrl+C). Shutting down the parser...");
+                manuallyCancelled = true;
                 cts.Cancel();
             };
 
             try
             {
-                programLogger.LogInformation("Парсинг Work.ua начат.");
+                programLogger.LogInformation("Work.ua parsing started.");
 
                 var workUaParser = serviceProvider.GetRequiredService<WorkUaJobParser>();
                 List<JobCard> jobCards = await workUaParser.GetJobCardList(cts.Token);
 
-                programLogger.LogInformation($"Парсинг завершен. Найдено {jobCards.Count} вакансий.");
+                programLogger.LogInformation($"Parsing completed. Found {jobCards.Count} jobs.");
             }
             catch (OperationCanceledException)
             {
-                programLogger.LogWarning("Операция парсинга была отменена.");
+                var reason = manuallyCancelled ? "By user" : "timeout";
+                programLogger.LogWarning($"The parsing operation was cancelled. {reason}.");
             }
             catch (HtmlPageLoadingException ex)
             {
-                programLogger.LogError(ex, $"Ошибка загрузки HTML-страницы по URL: {ex.Url}");
+                programLogger.LogError(ex, $"Error loading HTML page for URL: {ex.Url}");
             }
             catch (JobParsingException ex)
             {
-                programLogger.LogError(ex, $"Ошибка парсинга вакансии по URL: {ex.JobUrl}");
+                programLogger.LogError(ex, $"Error parsing job details for URL: {ex.JobUrl}");
+            }
+            catch (ArgumentException ex)
+            {
+                programLogger.LogError($"Configuration error: {ex.Message}");
             }
             catch (Exception ex)
             {
-                programLogger.LogCritical(ex, "Непредвиденная ошибка");
+                programLogger.LogCritical(ex, "An unexpected error occurred");
             }
         }
     }
