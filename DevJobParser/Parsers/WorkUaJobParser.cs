@@ -1,4 +1,5 @@
-﻿using AngleSharp.Dom;
+﻿using System.Net.NetworkInformation;
+using AngleSharp.Dom;
 using AngleSharp.Html.Dom;
 using AngleSharp.Html.Parser;
 using DevJobParser.DTO;
@@ -49,15 +50,29 @@ namespace DevJobParser.Parsers
     public class HtmlTagGetAttribute : IHtmlTagGetData
     {
         private readonly string _attributeName;
+        private readonly string _prefix;
 
         public HtmlTagGetAttribute(string attributeName)
         {
             _attributeName = attributeName;
+            _prefix = string.Empty;
+        }
+
+        public HtmlTagGetAttribute(string attributeName, string prefix) : this(attributeName)
+        {
+            _prefix = prefix;
         }
 
         public string? RetrieveData(IElement element)
         {
-            return element?.GetAttribute(_attributeName);
+            string? data = element?.GetAttribute(_attributeName);
+            if(data is null)
+                return null;
+
+            if(_prefix != string.Empty)
+                    data = _prefix + data;
+
+            return data;
         }
 
         public List<string?>? RetrieveData(IHtmlCollection<IElement> elements)
@@ -159,7 +174,7 @@ namespace DevJobParser.Parsers
             catch (HttpRequestException ex)
             {
                 _logger.LogError(ex, "Не удалось получить HTML-страницу после нескольких попыток: {url}", url);
-                throw new HtmlPageLoadingException(ex.Message, url, ex);
+                throw new HtmlPageLoadingException(url, ex.Message, ex);
             }
             
             return htmlPage;
@@ -185,7 +200,7 @@ namespace DevJobParser.Parsers
                     new ParsingRule
                     {
                         Selector = "div#pjax-jobs-list > div.card h2 > a",
-                        Strategy = new HtmlTagGetAttribute("href")
+                        Strategy = new HtmlTagGetAttribute(attributeName:"href", prefix:"https://www.work.ua")
                     }
                 }
             };
@@ -199,7 +214,7 @@ namespace DevJobParser.Parsers
             while(true)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                List<string> jobLinkListOnCurrentPage;
+                List<string?>? jobLinkListOnCurrentPage;
 
                 try
                 {
@@ -229,7 +244,7 @@ namespace DevJobParser.Parsers
 
         private async Task<List<string>?> GetJobLinkListOnPage(string searchLink, CancellationToken cancellationToken)
         {
-            string htmlPage = await _workUaHtmlLoader.GetHtmlAsync(searchLink, cancellationToken);
+            var htmlPage = await _workUaHtmlLoader.GetHtmlAsync(searchLink, cancellationToken);
 
             var htmlDocumentObject = _htmlParser.ParseDocument(htmlPage);
 
@@ -245,9 +260,9 @@ namespace DevJobParser.Parsers
                 return null;
             }
 
-            List<string?>? rawLinks = linkRule.Strategy.RetrieveData(htmlJobLinksOnPage);
+            var jobLinks = linkRule.Strategy.RetrieveData(htmlJobLinksOnPage);
 
-            return rawLinks.Select(link => "https://www.work.ua" + link).ToList();
+            return jobLinks.Where(link => link is not null).Select(link => link!).ToList();;
         }
     }
 

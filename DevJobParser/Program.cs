@@ -20,7 +20,16 @@ namespace DevJobParser
                 builder.AddDebug();
             });
 
-            services.AddSingleton<HttpClient>();
+            services.AddSingleton<HttpClient>(provider =>
+            {
+                var client = new HttpClient();
+
+                client.Timeout = TimeSpan.FromSeconds(15);
+                client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+                client.DefaultRequestHeaders.Add("Accept-Language", "uk-UA,uk;q=0.9,en-US;q=0.8,en;q=0.7");
+
+                return client;
+            });
             services.AddSingleton<HtmlParser>();
             services.AddSingleton<WorkUaHtmlLoader>();
             services.AddSingleton<WorkUaJobLinkParser>();
@@ -30,12 +39,17 @@ namespace DevJobParser
             {
                 options.SearchLink = "https://www.work.ua/jobs-remote-it-.net/?days=124&page=";
             });
-
             using var serviceProvider = services.BuildServiceProvider();
 
             var programLogger = serviceProvider.GetRequiredService<ILogger<Program>>();
 
-            using CancellationTokenSource cts = new CancellationTokenSource();
+            using CancellationTokenSource cts = new CancellationTokenSource(TimeSpan.FromMinutes(5));
+            Console.CancelKeyPress +=(sender, eventArgs) =>
+            {
+                eventArgs.Cancel = true;
+                programLogger.LogWarning("Отмена выполнения (Ctrl+C). Завершение работы парсера...");
+                cts.Cancel();
+            };
 
             try
             {
