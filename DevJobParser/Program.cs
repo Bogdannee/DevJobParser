@@ -31,7 +31,7 @@ namespace DevJobParser
                 options.SearchLink = "https://www.work.ua/jobs-remote-it-.net/?days=124&page=";
             });
 
-            var serviceProvider = services.BuildServiceProvider();
+            using var serviceProvider = services.BuildServiceProvider();
 
             var programLogger = serviceProvider.GetRequiredService<ILogger<Program>>();
 
@@ -57,6 +57,10 @@ namespace DevJobParser
             catch (JobParsingException ex)
             {
                 programLogger.LogError(ex, $"Ошибка парсинга вакансии по URL: {ex.JobUrl}");
+            }
+            catch (Exception ex)
+            {
+                programLogger.LogCritical(ex, "Непредвиденная ошибка");
             }
         }
     }

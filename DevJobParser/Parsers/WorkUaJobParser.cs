@@ -87,20 +87,17 @@ namespace DevJobParser.Parsers
     {
         public string Url { get; }
 
-        public HtmlPageLoadingException()
+        public HtmlPageLoadingException(string url) : base()
         {
+            Url = url;
         }
 
-        public HtmlPageLoadingException(string message) : base(message)
+        public HtmlPageLoadingException(string url, string? message) : base(message)
         {
+            Url = url;
         }
 
-        public HtmlPageLoadingException(string message, Exception innerException) : base(message, innerException)
-        {
-        }
-
-        public HtmlPageLoadingException(string message, string url, Exception innerException) 
-            : base(message, innerException)
+        public HtmlPageLoadingException(string url, string? message, Exception? innerException) : base(message, innerException)
         {
             Url = url;
         }
@@ -110,20 +107,17 @@ namespace DevJobParser.Parsers
     {
         public string JobUrl { get; }
 
-        public JobParsingException()
+        public JobParsingException(string jobUrl) : base()
         {
+            JobUrl = jobUrl;
         }
 
-        public JobParsingException(string message) : base(message)
+        public JobParsingException(string jobUrl, string? message) : base(message)
         {
+            JobUrl = jobUrl;
         }
 
-        public JobParsingException(string message, Exception innerException) : base(message, innerException)
-        {
-        }
-
-        public JobParsingException(string message, string jobUrl, Exception innerException) 
-            : base(message, innerException)
+        public JobParsingException(string jobUrl, string? message, Exception? innerException) : base(message, innerException)
         {
             JobUrl = jobUrl;
         }
@@ -165,7 +159,7 @@ namespace DevJobParser.Parsers
             catch (HttpRequestException ex)
             {
                 _logger.LogError(ex, "Не удалось получить HTML-страницу после нескольких попыток: {url}", url);
-                throw new HtmlPageLoadingException(ex.Message, url, ex.InnerException);
+                throw new HtmlPageLoadingException(ex.Message, url, ex);
             }
             
             return htmlPage;
@@ -205,7 +199,17 @@ namespace DevJobParser.Parsers
             while(true)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                List<string>? jobLinkListOnCurrentPage = await GetJobLinkListOnPage(searchLink + currentPageNumber, cancellationToken);
+                List<string> jobLinkListOnCurrentPage;
+
+                try
+                {
+                    jobLinkListOnCurrentPage = await GetJobLinkListOnPage(searchLink + currentPageNumber, cancellationToken);
+                }
+                catch (HtmlPageLoadingException ex)
+                {
+                    _logger.LogError(ex, "Остановка пагинации из-за ошибки загрузки страницы {Page}", currentPageNumber);
+                    break;
+                }
 
                 _logger.LogInformation($"Parsed page: {currentPageNumber}");
 
@@ -216,6 +220,8 @@ namespace DevJobParser.Parsers
 
                 parsedJobLinkList.AddRange(jobLinkListOnCurrentPage);
                 currentPageNumber++;
+
+                await Task.Delay(500, cancellationToken);
             }
 
             return parsedJobLinkList;
@@ -229,7 +235,7 @@ namespace DevJobParser.Parsers
 
             if (!_jobLinkSelector.TryGetValue("JobLink", out var linkRule))
             {
-                throw new JobParsingException("Правило для парсинга \'JobLink\' не настроено в словаре!");
+                throw new JobParsingException(searchLink, "Правило для парсинга \'JobLink\' не настроено в словаре!");
             }
 
             var htmlJobLinksOnPage = htmlDocumentObject.QuerySelectorAll(linkRule.Selector);
@@ -341,8 +347,8 @@ namespace DevJobParser.Parsers
             var parsingTasks = parsedJobLinkList.Select(async parsedJobLink =>
             {
                 cancellationToken.ThrowIfCancellationRequested();
-
                 await _throttler.WaitAsync(cancellationToken);
+
                 try
                 {
                 string htmlPage = await _workUaHtmlLoader.GetHtmlAsync(parsedJobLink, cancellationToken);
@@ -357,7 +363,7 @@ namespace DevJobParser.Parsers
 
                 if (jobTitle is null || jobCompanyName is null || jobDescription is null)
                 {
-                    throw new JobParsingException($"One of a main fields is null. JobLink: {parsedJobLink}");
+                    throw new JobParsingException(parsedJobLink, "One of a main fields is null.");
                 }
 
                 // Additional fields
@@ -386,25 +392,26 @@ namespace DevJobParser.Parsers
                     AdditionalDetails = additionalDetails,
                 };
 
-                }
-                catch(HttpRequestException ex)
-                {
-                    _logger.LogError(ex, "Не удалось получить или спарсить детали вакансии после нескольких попыток: {ParsedJobLink}", parsedJobLink);
-                    return null;
-                }
-                catch (JobParsingException)
-                {
-                    throw;
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Ошибка при парсинге деталей вакансии {ParsedJobLink}", parsedJobLink);
-                    return null;
-                }
-                finally
-                {
-                    _throttler.Release();
-                }
+            }
+            catch(HtmlPageLoadingException ex)
+            {
+                _logger.LogError(ex, "Не удалось получить детали вакансии после нескольких попыток: {ParsedJobLink}", parsedJobLink);
+                return null;
+            }
+            catch (JobParsingException ex)
+            {
+                _logger.LogWarning(ex, "Пропущена вакансия с неполными данными: {ParsedJobLink}", parsedJobLink);
+                return null;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Ошибка при парсинге деталей вакансии {ParsedJobLink}", parsedJobLink);
+                return null;
+            }
+            finally
+            {
+                _throttler.Release();
+            }
 
             }).ToList();
 
