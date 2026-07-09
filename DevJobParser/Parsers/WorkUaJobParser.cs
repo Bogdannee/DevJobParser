@@ -1,6 +1,4 @@
-﻿using System.Net.NetworkInformation;
-using System.Web;
-using AngleSharp.Dom;
+﻿using AngleSharp.Dom;
 using AngleSharp.Html.Dom;
 using AngleSharp.Html.Parser;
 using DevJobParser.DTO;
@@ -178,7 +176,6 @@ namespace DevJobParser.Parsers
             }
             catch (HttpRequestException ex)
             {
-                _logger.LogError(ex, "Failed to load HTML page after several retries: {url}", url);
                 throw new HtmlPageLoadingException(url, ex.Message, ex);
             }
             
@@ -227,7 +224,7 @@ namespace DevJobParser.Parsers
                 }
                 catch (HtmlPageLoadingException ex)
                 {
-                    _logger.LogError(ex, "Остановка пагинации из-за ошибки загрузки страницы {Page}", currentPageNumber);
+                    _logger.LogError(ex, "Pagination stopped due to page loading error {Page}", currentPageNumber);
                     break;
                 }
 
