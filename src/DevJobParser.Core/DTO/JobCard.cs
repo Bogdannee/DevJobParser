@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace DevJobParser.DTO
+﻿namespace DevJobParser.Core.DTO
 {
     public class JobCard
     {
