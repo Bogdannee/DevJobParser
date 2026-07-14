@@ -6,7 +6,7 @@ using DevJobParser.Parsers.WorkUa;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddInfrastructure();
-builder.Services.AddWorkUaParser();
+builder.Services.AddWorkUaParser(builder.Configuration);
 
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();

@@ -2,6 +2,7 @@
 using DevJobParser.Core.DTO;
 using DevJobParser.Parsers.WorkUa.DetailsParser;
 using DevJobParser.Parsers.WorkUa.LinkParser;
+using DevJobParser.Parsers.WorkUa.Options;
 using Microsoft.Extensions.Options;
 
 namespace DevJobParser.Parsers.WorkUa

@@ -1,4 +1,4 @@
-namespace DevJobParser.Parsers.WorkUa
+namespace DevJobParser.Parsers.WorkUa.Options
 {
     public class WorkUaParserOptions
     {
