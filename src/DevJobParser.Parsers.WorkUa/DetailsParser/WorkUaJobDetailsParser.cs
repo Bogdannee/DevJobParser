@@ -13,13 +13,13 @@ namespace DevJobParser.Parsers.WorkUa.DetailsParser
         private readonly ILogger<WorkUaJobDetailsParser> _logger;
         private readonly Dictionary<string, ParsingRule> _jobDetailSelectors;
         private readonly SemaphoreSlim _throttler;
-        private readonly IHtmlLoader _workUaHtmlLoader;
+        private readonly IHtmlLoader _htmlLoader;
         private readonly HtmlParser _htmlParser;
 
 
         public WorkUaJobDetailsParser(IHtmlLoader workUaHtmlLoader, ILogger<WorkUaJobDetailsParser> logger, HtmlParser htmlParser)
         {
-            _workUaHtmlLoader = workUaHtmlLoader;
+            _htmlLoader = workUaHtmlLoader;
             _logger = logger;
             _htmlParser = htmlParser;
             _throttler = new SemaphoreSlim(initialCount: 5);
@@ -108,7 +108,7 @@ namespace DevJobParser.Parsers.WorkUa.DetailsParser
 
                 try
                 {
-                string htmlPage = await _workUaHtmlLoader.GetHtmlAsync(parsedJobLink, cancellationToken);
+                string htmlPage = await _htmlLoader.GetHtmlAsync(parsedJobLink, cancellationToken);
 
                 var angleHtmlDocument = _htmlParser.ParseDocument(htmlPage);
 

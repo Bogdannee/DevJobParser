@@ -9,14 +9,14 @@ namespace DevJobParser.Parsers.WorkUa.LinkParser
     public class WorkUaJobLinkParser
     {
         private readonly ILogger<WorkUaJobLinkParser> _logger;
-        private readonly IHtmlLoader _workUaHtmlLoader;
+        private readonly IHtmlLoader _htmlLoader;
         private readonly Dictionary<string, ParsingRule> _jobLinkSelector;
         private readonly HtmlParser _htmlParser;
 
         public WorkUaJobLinkParser(ILogger<WorkUaJobLinkParser> logger, IHtmlLoader workUaHtmlLoader, HtmlParser htmlParser)
         {
             _logger = logger;
-            _workUaHtmlLoader = workUaHtmlLoader;
+            _htmlLoader = workUaHtmlLoader;
             _htmlParser = htmlParser;
             _jobLinkSelector = new Dictionary<string, ParsingRule>()
             {
@@ -68,7 +68,7 @@ namespace DevJobParser.Parsers.WorkUa.LinkParser
 
         private async Task<List<string>?> GetJobLinkListOnPage(string searchLink, CancellationToken cancellationToken)
         {
-            var htmlPage = await _workUaHtmlLoader.GetHtmlAsync(searchLink, cancellationToken);
+            var htmlPage = await _htmlLoader.GetHtmlAsync(searchLink, cancellationToken);
 
             var htmlDocumentObject = _htmlParser.ParseDocument(htmlPage);
 

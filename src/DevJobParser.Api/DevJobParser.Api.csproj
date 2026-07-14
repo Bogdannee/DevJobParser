@@ -3,6 +3,7 @@
   <ItemGroup>
     <ProjectReference Include="..\DevJobParser.Core\DevJobParser.Core.csproj" />
     <ProjectReference Include="..\DevJobParser.Infrastructure\DevJobParser.Infrastructure.csproj" />
+    <ProjectReference Include="..\DevJobParser.Parsers.Djinni\DevJobParser.Parsers.Djinni.csproj" />
     <ProjectReference Include="..\DevJobParser.Parsers.WorkUa\DevJobParser.Parsers.WorkUa.csproj" />
   </ItemGroup>
 
