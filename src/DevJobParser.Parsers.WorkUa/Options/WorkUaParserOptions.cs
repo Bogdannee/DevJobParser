@@ -4,6 +4,6 @@ namespace DevJobParser.Parsers.WorkUa.Options
     {
         public string SourceName {get; set;} = string.Empty;
         public string SearchLink { get; set; } = string.Empty;
-        public int MaxPages { get; set; } = 50;
+        public int MaxPages { get; set; }
     }
 }

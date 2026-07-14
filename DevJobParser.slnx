@@ -3,4 +3,6 @@
   <Project Path="src/DevJobParser.Infrastructure/DevJobParser.Infrastructure.csproj" />
   <Project Path="src/DevJobParser.Parsers.WorkUa/DevJobParser.Parsers.WorkUa.csproj" />
   <Project Path="src/DevJobParser.Api/DevJobParser.Api.csproj" />
+  <Project Path="src/DevJobParser.Parsers.Djinni/DevJobParser.Parsers.Djinni.csproj" />
+  <Project Path="src/DevJobParser.Parsers.RobotaUa/DevJobParser.Parsers.RobotaUa.csproj" />
 </Solution>
