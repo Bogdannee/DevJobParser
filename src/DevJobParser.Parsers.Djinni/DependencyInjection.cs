@@ -13,8 +13,8 @@ public static class DependencyInjection
     {
         services.AddSingleton<DjinniJobLinkParser>();
         services.AddSingleton<DjinniJobDetailsParser>();
-        services.AddKeyedSingleton<IJobParser, DjinniJobParser>("workua");
-        services.Configure<DjinniParserOptions>(configuration.GetSection("WorkUaParser"));
+        services.AddKeyedSingleton<IJobParser, DjinniJobParser>("djinni");
+        services.Configure<DjinniParserOptions>(configuration.GetSection("DjinniParser"));
 
         return services;
     }
