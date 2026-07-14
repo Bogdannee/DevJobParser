@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <ItemGroup>
+    <ProjectReference Include="..\DevJobParser.Core\DevJobParser.Core.csproj" />
+    <ProjectReference Include="..\DevJobParser.Infrastructure\DevJobParser.Infrastructure.csproj" />
+    <ProjectReference Include="..\DevJobParser.Parsers.WorkUa\DevJobParser.Parsers.WorkUa.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+</Project>
