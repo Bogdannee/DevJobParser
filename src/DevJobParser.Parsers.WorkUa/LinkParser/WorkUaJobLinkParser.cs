@@ -51,7 +51,7 @@ namespace DevJobParser.Parsers.WorkUa.LinkParser
                     break;
                 }
 
-                _logger.LogInformation($"Parsed page: {currentPageNumber}");
+                _logger.LogInformation("Parsed page: {currentPageNumber}", currentPageNumber);
 
                 if (jobLinkListOnCurrentPage is null)
                 {

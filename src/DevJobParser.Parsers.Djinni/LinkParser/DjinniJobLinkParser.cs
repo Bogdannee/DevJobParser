@@ -61,7 +61,7 @@ public class DjinniJobLinkParser
                 break;
             }
 
-            _logger.LogInformation($"Parsed page: {currentPageNumber}");
+            _logger.LogInformation("Parsed page: {currentPageNumber}", currentPageNumber);
 
             if (actualJobCounter != jobCounterOnPage || jobLinkListOnCurrentPage is null)
             {
