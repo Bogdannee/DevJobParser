@@ -11,7 +11,8 @@ namespace ConsoleApp2
     {
         static async Task Main()
         {
-            await DjinniParser.Start();
+            //await DjinniParser.Start();
+            await DjinniParser.GetJob();
         }
     }
     internal class DjinniParser
@@ -20,7 +21,7 @@ namespace ConsoleApp2
         {
             using var httpClient = new HttpClient();
 
-            httpClient.DefaultRequestHeaders.Add("Cookie", "_hjSessionUser_2259799=eyJpZCI6ImNmODIyODVkLWE1NDgtNTg4Zi1hNDJkLWNkYzdkMzY3MzE2NiIsImNyZWF0ZWQiOjE3NTU0NTc2NDI3MzYsImV4aXN0aW5nIjp0cnVlfQ==; _ga=GA1.1.897511225.1776346063; _fbp=fb.1.1776346062956.330861965910088741; _gcl_au=1.1.1466098426.1784548509; searchEventAction=no_suggest; _clck=1w1lczt%5E2%5Eg7w%5E0%5E2392; _clsk=18lv4ex%5E1784548904379%5E1%5E1%5Et.clarity.ms%2Fcollect; cf_clearance=NhQZ02JZNQ6cHV.bPmO0xu2hWsoqQ7gj4RvZO5lbN6A-1784548914-1.2.1.1-LXWfxGxur7ABhUygbAbD1Uc0GuAsC8VLMBeRMop8R1oJitOZpnEHZCZ33zykSGyYyDSkhbtBUl5CHnzZrtseBhPSHwAhoqUntVAx6n0NSqUWQw6jQID7h.G2FSYNP3wFdYxHzAsyoPPkAjFzUsqelLhODM4ncOCpDjuk9nPT4EY4x.Hwq3xf9HYmZEwLDa1AXuH2fZ_La0xIeFleF41V7wCFbYGhxuXVkdVS0CK.d5Nbhhd_BKZqjFfTjuT5ju0Zvz.iNPVwje45md48IKrMlWJ6Y1P4yGDgls7rqbtkuEnpXeQEDolCdVkCyoyXjKdLfmWSLxi3SoSZpfShpo5TCHOgd1zW3PhHcrF4veAymWxSZZTGxM0HhbtCJ_eOpQ.EpPsC2sLS3LMyxrvG1jrjXpx7PhXenaTayceOHbl0PqXgGEe_n3IWq6Z.fMbD42L6; __cf_bm=1QFnz5u9SrzqICAuDoQCvBu_ob91rRcSPsT.VRsQX1I-1784548919.3992708-1.0.1.1-WrD7Dh8Mlvs7SM6MSxUOEM7FFKF5cF.q6WqTRdabDNfx.M_rGe1.QXV8YaylQ_lAnDQdphO4feroosm.DLPIotXYfARUtWbJ90LZePpSMUJ1.NVeS4IwsPsyop0PYsWB; _ga_WS6TVT9PSM=GS2.1.s1784548509$o50$g1$t1784548919$j34$l0$h465888408$dvMayrGhoLVaKg2cTNjMWa5q-FDtGL7-rsQ");
+            httpClient.DefaultRequestHeaders.Add("Cookie", "_hjSessionUser_2259799=eyJpZCI6ImNmODIyODVkLWE1NDgtNTg4Zi1hNDJkLWNkYzdkMzY3MzE2NiIsImNyZWF0ZWQiOjE3NTU0NTc2NDI3MzYsImV4aXN0aW5nIjp0cnVlfQ==; _ga=GA1.1.897511225.1776346063; _fbp=fb.1.1776346062956.330861965910088741; _gcl_au=1.1.1466098426.1784548509; _clck=1w1lczt%5E2%5Eg7w%5E0%5E2392; searchEventAction=no_suggest; cf_clearance=i_oiDSI2RwzlGvp95ObAKoKTIyFymgowsjoHczuja8g-1785241140-1.2.1.1-T0UTP1pzYHhZNqrrWUqXfdRJF4yKMxxzLvB3sMmPdtm.Rz8TtqM2.rTs1ywtm3FveEsO4HnbU3uvwiLohOT0Oaae9rS2Tqz6qz0sAkujOXm2XLOTv.KObpmBc6jhxBQe.25n0qJTOmjSlii5d.BQkidJvg2JZCxZswPy.0W0.vH4OgjJYcVnX4HRnBf2lWfPAsP3hFITwtnK5HMu7UJhpVcuxi2DcLqRFuBogIOgEmr40.kJPlnxUJf7hvZ6mN_FKKeUoUPw0lCi3Agy8p6SBQVn8O_bZUToKhulKHs0SmEnf8Nh1ZBhxF1z_MBOWPXMLWYZ5yWqyLit2CHZ9s8LDe5Ai3hmtZ2tfSgot51MnPAvmKFabW7N6sNpOcjgOQIxaFCNLvVpDdbMkubEVArAS.BRJBH7o2pZTBHD._WFi3fbRyOWGaqeP0GXrGInpE2CXbIdWsdK3fiuUxFwxCQoJw; __cf_bm=0wE9iaoRyQJ2BnOh2rX84llJ79A8nM95xmMwN7FgMnw-1785241140.1281357-1.0.1.1-9XV95ciICuy_EA9FRtK3FWIiB_JFAkPhZmv5RUuN_.S4VKosPVWSc1osiRSp8R_65r7yOevy23pCrJzH3Z6cI0YUCAmHInXsdTTaQYt4RbvSVzts7y.1cDTv5_7x.ttw; _ga_WS6TVT9PSM=GS2.1.s1785241118$o54$g1$t1785241140$j38$l0$h378327272$dvMayrGhoLVaKg2cTNjMWa5q-FDtGL7-rsQ");
             httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36");
             httpClient.DefaultRequestHeaders.Add("Accept-Language", "uk-UA,uk;q=0.9,en-US;q=0.8,en;q=0.7");
 
@@ -136,73 +137,110 @@ namespace ConsoleApp2
             }
             """;
 
-            var payload = new
+            for (int numPage = 0; numPage < 10; numPage++)
             {
-                operationName = "getPublishedVacanciesList",
-                variables = new
+                var payload = new
                 {
-                    pagination = new
+                    operationName = "getPublishedVacanciesList",
+                    variables = new
                     {
-                        count = 20,
-                        page = 1
-                    },
-                    filter = new
-                    {
-                        keywords = ".net",
-                        militaryVacancyDisplayMode = "APPENDED",
-                        metroBranches = new object[0],         // Пустой массив в JSON
-                        additionalKeywords = "",
-                        clusterKeywords = new object[0],
-                        salary = 0,
-                        districtIds = new object[0],
-                        microDistrictIds = new object[0],
-                        scheduleIds = new[] { "3" },           // Массив со строкой
-                        rubrics = new object[0],
-                        showAgencies = true,
-                        showOnlyNoCvApplyVacancies = false,
-                        showOnlySpecialNeeds = false,
-                        showOnlyWithoutExperience = false,
-                        showOnlyNotViewed = false,
-                        showWithoutSalary = true,
-                        location = new
+                        pagination = new
                         {
-                            latitude = 0,
-                            longitude = 0
+                            count = 20,
+                            page = numPage
                         },
-                        isForVeterans = false,
-                        isReservation = false,
-                        isOfficeWithGenerator = false,
-                        isOfficeWithShelter = false,
-                        gender = (string)null,                 // ВАЖНО: для null в анонимных объектах нужен явный каст типов!
-                        branchIds = new object[0]
+                        filter = new
+                        {
+                            keywords = ".net",
+                            militaryVacancyDisplayMode = "EXCLUDED",
+                            metroBranches = new object[0],         // Пустой массив в JSON
+                            additionalKeywords = "",
+                            clusterKeywords = new object[0],
+                            salary = 0,
+                            districtIds = new object[0],
+                            microDistrictIds = new object[0],
+                            scheduleIds = new[] { "3" },           // Массив со строкой
+                            rubrics = new object[0],
+                            showAgencies = true,
+                            showOnlyNoCvApplyVacancies = false,
+                            showOnlySpecialNeeds = false,
+                            showOnlyWithoutExperience = false,
+                            showOnlyNotViewed = false,
+                            showWithoutSalary = true,
+                            location = new
+                            {
+                                latitude = 0,
+                                longitude = 0
+                            },
+                            isForVeterans = false,
+                            isReservation = false,
+                            isOfficeWithGenerator = false,
+                            isOfficeWithShelter = false,
+                            gender = (string)null,                 // ВАЖНО: для null в анонимных объектах нужен явный каст типов!
+                            branchIds = new object[0]
+                        },
+                        sort = "BY_BUSINESS_SCORE",
+                        isBrowser = true
                     },
-                    sort = "BY_BUSINESS_SCORE",
-                    isBrowser = true
-                },
-                query = graphQlQuery
-            };
+                    query = graphQlQuery
+                };
 
-            
 
-            // 3. Отправляем обычный POST запрос и сразу получаем JSON в виде строки (или десериализуем)
-            //var response = await httpClient.PostAsJsonAsync(
-            //    "https://dracula.robota.ua/?q=getPublishedVacanciesList",
-            //    payload);
 
-            //response.EnsureSuccessStatusCode();
+                // 3. Отправляем обычный POST запрос и сразу получаем JSON в виде строки (или десериализуем)
+                var response = await httpClient.PostAsJsonAsync(
+                    "https://dracula.robota.ua/?q=getPublishedVacanciesList",
+                    payload);
 
-            //// Получаем чистый JSON-ответ в виде строки!
-            //string jsonResponse = await response.Content.ReadAsStringAsync();
-            //Console.WriteLine(jsonResponse);
-            await GetJob();
+                response.EnsureSuccessStatusCode();
+
+                // Получаем чистый JSON-ответ в виде строки!
+                string jsonResponse = await response.Content.ReadAsStringAsync();
+                //Console.WriteLine(jsonResponse);
+                //await GetJob();
+
+                JsonNode? rootNode = JsonNode.Parse(jsonResponse);
+
+                var ids = new List<string>();
+                var companyIds = new List<string>();
+
+                var items = rootNode?["data"]?["publishedVacancies"]?["items"]?.AsArray();
+
+                if (items.Count == 0)
+                {
+                    break;
+                }
+
+                if (items != null)
+                {
+                    foreach (var item in items)
+                    {
+                        if (item == null) continue;
+
+                        var vacancyId = item["id"]?.ToString();
+                        var companyId = item["company"]?["id"]?.ToString();
+
+                        if (vacancyId != null) ids.Add(vacancyId);
+                        if (companyId != null) companyIds.Add(companyId);
+                    }
+                }
+
+                foreach (var id in ids)
+                {
+                    await GetJob(id);
+                    await Task.Delay(200);
+                }
+
+                Console.WriteLine($"\nPage: {numPage}\n");
+            }
             return new List<Dictionary<string, string>>();
         }
 
-        static async Task<string> GetJob()
+        public static async Task<string> GetJob(string jobId = "7933293")
         {
             using var httpClient = new HttpClient();
 
-            httpClient.DefaultRequestHeaders.Add("Cookie", "_hjSessionUser_2259799=eyJpZCI6ImNmODIyODVkLWE1NDgtNTg4Zi1hNDJkLWNkYzdkMzY3MzE2NiIsImNyZWF0ZWQiOjE3NTU0NTc2NDI3MzYsImV4aXN0aW5nIjp0cnVlfQ==; _ga=GA1.1.897511225.1776346063; _fbp=fb.1.1776346062956.330861965910088741; _gcl_au=1.1.1466098426.1784548509; searchEventAction=no_suggest; _clck=1w1lczt%5E2%5Eg7w%5E0%5E2392; _clsk=18lv4ex%5E1784548904379%5E1%5E1%5Et.clarity.ms%2Fcollect; cf_clearance=NhQZ02JZNQ6cHV.bPmO0xu2hWsoqQ7gj4RvZO5lbN6A-1784548914-1.2.1.1-LXWfxGxur7ABhUygbAbD1Uc0GuAsC8VLMBeRMop8R1oJitOZpnEHZCZ33zykSGyYyDSkhbtBUl5CHnzZrtseBhPSHwAhoqUntVAx6n0NSqUWQw6jQID7h.G2FSYNP3wFdYxHzAsyoPPkAjFzUsqelLhODM4ncOCpDjuk9nPT4EY4x.Hwq3xf9HYmZEwLDa1AXuH2fZ_La0xIeFleF41V7wCFbYGhxuXVkdVS0CK.d5Nbhhd_BKZqjFfTjuT5ju0Zvz.iNPVwje45md48IKrMlWJ6Y1P4yGDgls7rqbtkuEnpXeQEDolCdVkCyoyXjKdLfmWSLxi3SoSZpfShpo5TCHOgd1zW3PhHcrF4veAymWxSZZTGxM0HhbtCJ_eOpQ.EpPsC2sLS3LMyxrvG1jrjXpx7PhXenaTayceOHbl0PqXgGEe_n3IWq6Z.fMbD42L6; __cf_bm=1QFnz5u9SrzqICAuDoQCvBu_ob91rRcSPsT.VRsQX1I-1784548919.3992708-1.0.1.1-WrD7Dh8Mlvs7SM6MSxUOEM7FFKF5cF.q6WqTRdabDNfx.M_rGe1.QXV8YaylQ_lAnDQdphO4feroosm.DLPIotXYfARUtWbJ90LZePpSMUJ1.NVeS4IwsPsyop0PYsWB; _ga_WS6TVT9PSM=GS2.1.s1784548509$o50$g1$t1784548919$j34$l0$h465888408$dvMayrGhoLVaKg2cTNjMWa5q-FDtGL7-rsQ");
+            httpClient.DefaultRequestHeaders.Add("Cookie", "_hjSessionUser_2259799=eyJpZCI6ImNmODIyODVkLWE1NDgtNTg4Zi1hNDJkLWNkYzdkMzY3MzE2NiIsImNyZWF0ZWQiOjE3NTU0NTc2NDI3MzYsImV4aXN0aW5nIjp0cnVlfQ==; _ga=GA1.1.897511225.1776346063; _fbp=fb.1.1776346062956.330861965910088741; _gcl_au=1.1.1466098426.1784548509; _clck=1w1lczt%5E2%5Eg7w%5E0%5E2392; searchEventAction=no_suggest; cf_clearance=i_oiDSI2RwzlGvp95ObAKoKTIyFymgowsjoHczuja8g-1785241140-1.2.1.1-T0UTP1pzYHhZNqrrWUqXfdRJF4yKMxxzLvB3sMmPdtm.Rz8TtqM2.rTs1ywtm3FveEsO4HnbU3uvwiLohOT0Oaae9rS2Tqz6qz0sAkujOXm2XLOTv.KObpmBc6jhxBQe.25n0qJTOmjSlii5d.BQkidJvg2JZCxZswPy.0W0.vH4OgjJYcVnX4HRnBf2lWfPAsP3hFITwtnK5HMu7UJhpVcuxi2DcLqRFuBogIOgEmr40.kJPlnxUJf7hvZ6mN_FKKeUoUPw0lCi3Agy8p6SBQVn8O_bZUToKhulKHs0SmEnf8Nh1ZBhxF1z_MBOWPXMLWYZ5yWqyLit2CHZ9s8LDe5Ai3hmtZ2tfSgot51MnPAvmKFabW7N6sNpOcjgOQIxaFCNLvVpDdbMkubEVArAS.BRJBH7o2pZTBHD._WFi3fbRyOWGaqeP0GXrGInpE2CXbIdWsdK3fiuUxFwxCQoJw; __cf_bm=0wE9iaoRyQJ2BnOh2rX84llJ79A8nM95xmMwN7FgMnw-1785241140.1281357-1.0.1.1-9XV95ciICuy_EA9FRtK3FWIiB_JFAkPhZmv5RUuN_.S4VKosPVWSc1osiRSp8R_65r7yOevy23pCrJzH3Z6cI0YUCAmHInXsdTTaQYt4RbvSVzts7y.1cDTv5_7x.ttw; _ga_WS6TVT9PSM=GS2.1.s1785241118$o54$g1$t1785241140$j38$l0$h378327272$dvMayrGhoLVaKg2cTNjMWa5q-FDtGL7-rsQ");
             httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36");
             httpClient.DefaultRequestHeaders.Add("Accept-Language", "uk-UA,uk;q=0.9,en-US;q=0.8,en;q=0.7");
 
@@ -519,7 +557,7 @@ namespace ConsoleApp2
                 operationName = "getPublishedVacancy",
                 variables = new
                 {
-                    id = "11112632",
+                    id = jobId,
                     trackView = false,
                     isBrowser = true
                 },
@@ -547,25 +585,34 @@ namespace ConsoleApp2
                     // Вытаскиваем простые текстовые и числовые поля
                     string? id = vacancy["id"]?.ToString();
                     string? title = vacancy["title"]?.ToString();
-                    bool? isActive = vacancy["isActive"]?.GetValue<bool>();
+                    string? company = vacancy["company"]?["name"]?.ToString();
+                    decimal? salaryAmount = vacancy["salary"]?["amount"]?.GetValue<decimal>();
 
                     // Вытаскиваем данные из вложенных объектов (например, город или зарплата)
-                    string? cityName = vacancy["city"]?["name"]?.ToString();
-                    decimal? salaryAmount = vacancy["salary"]?["amount"]?.GetValue<decimal>();
+                    string? description = vacancy["description"]?.ToString();
+
+                    var tagGroupArray = vacancy?["keyTagGroups"]?.AsArray();
+                    List<string> tagNames = tagGroupArray
+                        ?.Select(tag => tag?["name"]?.ToString())
+                        ?.Where(name => name != null)
+                        ?.ToList() ?? new List<string>();
+
+                    string allTagsString = string.Join(", ", tagNames);
 
                     // Выводим результат в консоль
                     Console.WriteLine($"ID Вакансии: {id}");
                     Console.WriteLine($"Название: {title}");
-                    Console.WriteLine($"Город: {cityName}");
+                    Console.WriteLine($"Название: {company}");
+                    Console.WriteLine($"Город: {description}");
                     Console.WriteLine($"Зарплата: {salaryAmount} грн");
-                    Console.WriteLine($"Активна: {isActive}");
+                    Console.WriteLine($"Доп: {allTagsString}");
 
                     // Если нужно достать элемент из массива (например, первый график работы)
                     var firstSchedule = vacancy["schedules"]?[0]?["name"]?.ToString();
                     Console.WriteLine($"График: {firstSchedule}");
                 }
             }
-
+            Console.WriteLine("-------------------------");
             return jsonResponse;
         }
     }

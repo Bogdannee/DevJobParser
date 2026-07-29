@@ -6,4 +6,9 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\DevJobParser.Core\DevJobParser.Core.csproj" />
+    <ProjectReference Include="..\DevJobParser.Infrastructure\DevJobParser.Infrastructure.csproj" />
+  </ItemGroup>
+
 </Project>
