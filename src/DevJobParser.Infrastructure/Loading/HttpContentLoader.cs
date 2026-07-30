@@ -5,12 +5,12 @@ using DevJobParser.Core.Exceptions;
 
 namespace DevJobParser.Infrastructure.Loading
 {
-    public class HtmlLoader : IHtmlLoader
+    public class HttpContentLoader : IHttpContentLoader
     {
         private readonly HttpClient _httpClient;
-        private readonly ILogger<HtmlLoader> _logger;
+        private readonly ILogger<HttpContentLoader> _logger;
         private readonly AsyncRetryPolicy _retryPolicy;
-        public HtmlLoader(HttpClient httpClient, ILogger<HtmlLoader> logger)
+        public HttpContentLoader(HttpClient httpClient, ILogger<HttpContentLoader> logger)
         {
             _httpClient = httpClient;
             _logger = logger;

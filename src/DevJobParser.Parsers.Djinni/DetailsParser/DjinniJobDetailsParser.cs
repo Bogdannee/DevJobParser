@@ -13,12 +13,12 @@ public class DjinniJobDetailsParser
     private readonly ILogger<DjinniJobDetailsParser> _logger;
     private readonly Dictionary<string, ParsingRule> _jobDetailSelectors;
     private readonly SemaphoreSlim _throttler;
-    private readonly IHtmlLoader _htmlLoader;
+    private readonly IHttpContentLoader _httpContentLoader;
     private readonly HtmlParser _htmlParser;
 
-    public DjinniJobDetailsParser(IHtmlLoader htmlLoader, ILogger<DjinniJobDetailsParser> logger, HtmlParser htmlParser)
+    public DjinniJobDetailsParser(IHttpContentLoader httpContentLoader, ILogger<DjinniJobDetailsParser> logger, HtmlParser htmlParser)
     {
-        _htmlLoader = htmlLoader;
+        _httpContentLoader = httpContentLoader;
         _logger = logger;
         _htmlParser = htmlParser;
         _throttler = new SemaphoreSlim(initialCount: 5);
@@ -82,7 +82,7 @@ public class DjinniJobDetailsParser
 
             try
             {
-            string htmlPage = await _htmlLoader.GetHtmlAsync(parsedJobLink, cancellationToken);
+            string htmlPage = await _httpContentLoader.GetHtmlAsync(parsedJobLink, cancellationToken);
 
             var angleHtmlDocument = _htmlParser.ParseDocument(htmlPage);
 

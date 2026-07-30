@@ -9,14 +9,14 @@ namespace DevJobParser.Parsers.Djinni.LinkParser;
 public class DjinniJobLinkParser
 {
     private readonly ILogger<DjinniJobLinkParser> _logger;
-    private readonly IHtmlLoader _htmlLoader;
+    private readonly IHttpContentLoader _httpContentLoader;
     private readonly Dictionary<string, ParsingRule> _jobLinkSelector;
     private readonly HtmlParser _htmlParser;
 
-    public DjinniJobLinkParser(ILogger<DjinniJobLinkParser> logger, IHtmlLoader htmlLoader, HtmlParser htmlParser)
+    public DjinniJobLinkParser(ILogger<DjinniJobLinkParser> logger, IHttpContentLoader httpContentLoader, HtmlParser htmlParser)
     {
         _logger = logger;
-            _htmlLoader = htmlLoader;
+            _httpContentLoader = httpContentLoader;
             _htmlParser = htmlParser;
             _jobLinkSelector = new Dictionary<string, ParsingRule>()
             {
@@ -78,7 +78,7 @@ public class DjinniJobLinkParser
 
     public async Task<string?> GetJobCounterOnPage(string searchLink, CancellationToken cancellationToken)
     {
-        var html = await _htmlLoader.GetHtmlAsync(searchLink, cancellationToken);
+        var html = await _httpContentLoader.GetHtmlAsync(searchLink, cancellationToken);
         var angleDocument = _htmlParser.ParseDocument(html);
 
         if (!_jobLinkSelector.TryGetValue("JobCounter", out var linkRule))
@@ -93,7 +93,7 @@ public class DjinniJobLinkParser
 
     private async Task<List<string>?> GetJobLinkListOnPage(string searchLink, CancellationToken cancellationToken)
     {
-        var htmlPage = await _htmlLoader.GetHtmlAsync(searchLink, cancellationToken);
+        var htmlPage = await _httpContentLoader.GetHtmlAsync(searchLink, cancellationToken);
 
         var htmlDocumentObject = _htmlParser.ParseDocument(htmlPage);
 

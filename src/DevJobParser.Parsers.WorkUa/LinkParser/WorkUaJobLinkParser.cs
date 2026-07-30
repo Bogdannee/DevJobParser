@@ -2,32 +2,32 @@ using Microsoft.Extensions.Logging;
 using DevJobParser.Core.Exceptions;
 using DevJobParser.Infrastructure.Loading;
 using DevJobParser.Infrastructure.HtmlExtractors;
-using AngleSharp.Html.Parser;
+using DevJobParser.Infrastructure.Fields;
+using DevJobParser.Infrastructure.Fields.Enums;
 
 namespace DevJobParser.Parsers.WorkUa.LinkParser
 {
     public class WorkUaJobLinkParser
     {
         private readonly ILogger<WorkUaJobLinkParser> _logger;
-        private readonly IHtmlLoader _htmlLoader;
-        private readonly Dictionary<string, ParsingRule> _jobLinkSelector;
-        private readonly HtmlParser _htmlParser;
+        private readonly IHttpContentLoader _httpContentLoader;
+        private readonly HtmlField _jobUrlField;
+        private readonly HtmlExtractController _htmlExtractController;
 
-        public WorkUaJobLinkParser(ILogger<WorkUaJobLinkParser> logger, IHtmlLoader workUaHtmlLoader, HtmlParser htmlParser)
+        public WorkUaJobLinkParser(
+            ILogger<WorkUaJobLinkParser> logger,
+            IHttpContentLoader httpContentLoader,
+            HtmlExtractController htmlExtractController)
         {
             _logger = logger;
-            _htmlLoader = workUaHtmlLoader;
-            _htmlParser = htmlParser;
-            _jobLinkSelector = new Dictionary<string, ParsingRule>()
+            _httpContentLoader = httpContentLoader;
+            _htmlExtractController = htmlExtractController;
+            _jobUrlField = new HtmlField()
             {
-                {
-                    "JobLink",
-                    new ParsingRule
-                    {
-                        Selector = "div#pjax-jobs-list > div.card h2 > a",
-                        Strategy = new HtmlTagAttributeExtractor(attributeName:"href", prefix:"https://www.work.ua")
-                    }
-                }
+                Name = JobFieldName.Url,
+                Selector = "div#pjax-jobs-list > div.card h2 > a",
+                Strategy = new HtmlTagAttributeExtractor(attributeName:"href", prefix:"https://www.work.ua"),
+                Quantity = ValueQuantity.One
             };
         }
 
@@ -68,23 +68,10 @@ namespace DevJobParser.Parsers.WorkUa.LinkParser
 
         private async Task<List<string>?> GetJobLinkListOnPage(string searchLink, CancellationToken cancellationToken)
         {
-            var htmlPage = await _htmlLoader.GetHtmlAsync(searchLink, cancellationToken);
+            var htmlPage = await _httpContentLoader.GetHtmlAsync(searchLink, cancellationToken);
 
-            var htmlDocumentObject = _htmlParser.ParseDocument(htmlPage);
-
-            if (!_jobLinkSelector.TryGetValue("JobLink", out var linkRule))
-            {
-                throw new JobParsingException(searchLink, "Parsing rule for 'JobLink' is not configured in the dictionary!");
-            }
-
-            var htmlJobLinksOnPage = htmlDocumentObject.QuerySelectorAll(linkRule.Selector);
-
-            if (htmlJobLinksOnPage.Length == 0)
-            {
-                return null;
-            }
-
-            var jobLinks = linkRule.Strategy.RetrieveData(htmlJobLinksOnPage);
+            _htmlExtractController.ParseDocument(htmlPage);
+            var jobLinks = _htmlExtractController.GetListElements(_jobUrlField);
 
             return jobLinks.Where(link => link is not null).Select(link => link!).ToList();
         }

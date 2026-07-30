@@ -1,4 +1,5 @@
-using AngleSharp.Html.Parser;
+using DevJobParser.Infrastructure.Builders;
+using DevJobParser.Infrastructure.HtmlExtractors;
 using DevJobParser.Infrastructure.Loading;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -19,8 +20,10 @@ namespace DevJobParser.Infrastructure
                 return client;
             });
             
-            services.AddSingleton<HtmlParser>();
-            services.AddSingleton<IHtmlLoader, HtmlLoader>();
+            services.AddSingleton<HtmlExtractController>();
+            services.AddSingleton<JobBuilder>();
+
+            services.AddSingleton<IHttpContentLoader, HttpContentLoader>();
             return services;
         }
     }
