@@ -20,11 +20,11 @@ namespace DevJobParser.Infrastructure.HtmlExtractors
             _htmlDocument = _htmlParser.ParseDocument(htmlPage);
         }
 
-        public string? GetStringifiedData(HtmlField htmlField)
+        public string? GetStringifiedData(AbstractHtmlField htmlField)
         {
             string? result;
 
-            if (htmlField.Quantity == ValueQuantity.One)
+            if (htmlField.Quantity == ValueQuantity.Single)
             {
                 result = GetElement(htmlField);
             }
@@ -36,7 +36,7 @@ namespace DevJobParser.Infrastructure.HtmlExtractors
 
             return result;
         }
-        private string? GetElement(HtmlField htmlField)
+        private string? GetElement(AbstractHtmlField htmlField)
         {
             var htmlElement = _htmlDocument?.QuerySelector(htmlField.Selector);
 
@@ -48,7 +48,7 @@ namespace DevJobParser.Infrastructure.HtmlExtractors
             return data;
         }
 
-        public List<string?>? GetListElements(HtmlField htmlField)
+        public List<string?>? GetListElements(AbstractHtmlField htmlField)
         {
             var htmlElementCollection = _htmlDocument?.QuerySelectorAll(htmlField.Selector);
 

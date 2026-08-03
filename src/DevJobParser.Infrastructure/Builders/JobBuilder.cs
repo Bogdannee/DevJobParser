@@ -5,9 +5,9 @@ using DevJobParser.Infrastructure.HtmlExtractors;
 
 namespace DevJobParser.Infrastructure.Builders;
 
-public class JobBuilder
+public class JobCardBuilder
 {
-    private JobCard _jobCard;
+    private JobCard? _jobCard;
 
     public void AddField(JobFieldName name, string value)
     {
@@ -36,10 +36,15 @@ public class JobBuilder
         }
     }
 
+    public void AddAdditionalField(Dictionary<string, string?> additionalFields)
+    {
+        _jobCard.AdditionalDetails = additionalFields;
+    }
+
     public JobCard GetJobCard()
     {
         var returnedJobCard = _jobCard;
-        _jobCard = new JobCard();
+        _jobCard = null;
 
         return returnedJobCard;
     }

@@ -1,9 +1,10 @@
+using DevJobParser.Infrastructure.Fields.Enums;
 using DevJobParser.Infrastructure.HtmlExtractors;
 
 namespace DevJobParser.Infrastructure.Fields
 {
-    public class HtmlField : AbstractField
+    public class HtmlField(JobFieldName name) : AbstractHtmlField
     {
-        public required IHtmlDataExtractor Strategy { get; init; } = null!;
+        public override JobFieldName Name { get; } = name;
     }
 }

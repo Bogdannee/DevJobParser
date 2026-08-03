@@ -27,7 +27,7 @@ namespace DevJobParser.Parsers.WorkUa.LinkParser
                 Name = JobFieldName.Url,
                 Selector = "div#pjax-jobs-list > div.card h2 > a",
                 Strategy = new HtmlTagAttributeExtractor(attributeName:"href", prefix:"https://www.work.ua"),
-                Quantity = ValueQuantity.One
+                Quantity = ValueQuantity.Single
             };
         }
 

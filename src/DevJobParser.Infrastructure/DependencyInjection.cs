@@ -21,7 +21,7 @@ namespace DevJobParser.Infrastructure
             });
             
             services.AddSingleton<HtmlExtractController>();
-            services.AddSingleton<JobBuilder>();
+            services.AddSingleton<JobCardBuilder>();
 
             services.AddSingleton<IHttpContentLoader, HttpContentLoader>();
             return services;
