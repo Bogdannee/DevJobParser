@@ -3,6 +3,8 @@ using DevJobParser.Core.Exceptions;
 using DevJobParser.Infrastructure.Loading;
 using DevJobParser.Infrastructure.HtmlExtractors;
 using AngleSharp.Html.Parser;
+using DevJobParser.Infrastructure.Fields;
+using DevJobParser.Infrastructure.Fields.Enums;
 
 namespace DevJobParser.Parsers.Djinni.LinkParser;
 
@@ -10,50 +12,53 @@ public class DjinniJobLinkParser
 {
     private readonly ILogger<DjinniJobLinkParser> _logger;
     private readonly IHttpContentLoader _httpContentLoader;
-    private readonly Dictionary<string, ParsingRule> _jobLinkSelector;
-    private readonly HtmlParser _htmlParser;
+    private readonly HtmlField _jobUrlField;
+    private readonly HtmlAdditionalField _jobCounter;
+    private readonly HtmlExtractController _htmlExtractController;
 
-    public DjinniJobLinkParser(ILogger<DjinniJobLinkParser> logger, IHttpContentLoader httpContentLoader, HtmlParser htmlParser)
+    public DjinniJobLinkParser(
+        ILogger<DjinniJobLinkParser> logger,
+        IHttpContentLoader httpContentLoader,
+        HtmlExtractController htmlExtractController)
     {
         _logger = logger;
-            _httpContentLoader = httpContentLoader;
-            _htmlParser = htmlParser;
-            _jobLinkSelector = new Dictionary<string, ParsingRule>()
-            {
-                {
-                    "JobLink",
-                    new ParsingRule
-                    {
-                        Selector = "div.job-item > div > a",
-                        Strategy = new HtmlTagAttributeExtractor(attributeName:"href", prefix:"https://djinni.co")
-                    }
-                },
-                {
-                    "JobCounter",
-                    new ParsingRule
-                    {
-                        Selector = "header > div > h1+span",
-                        Strategy = new HtmlTextExtractor()
-                    }
-                }
-            };
+        _httpContentLoader = httpContentLoader;
+        _htmlExtractController = htmlExtractController;
+        _jobUrlField = new HtmlField(JobFieldName.Url)
+        {
+            Selector = "div.job-item > div > a",
+            Strategy = new HtmlTagAttributeExtractor(attributeName:"href", prefix:"https://djinni.co"),
+            Quantity = ValueQuantity.Multiply
+        };
+
+        _jobCounter = new HtmlAdditionalField()
+        {
+            AdditionalDetailName = "JobCounter",
+            Selector = "header > div > h1+span",
+            Strategy = new HtmlTextExtractor(),
+            Quantity = ValueQuantity.Single
+        };
     }
 
     public async Task<List<string>> GetJobLinksFromSearchLink(string searchLink, int maxPages, CancellationToken cancellationToken)
     {
         var parsedJobLinkList = new List<string>();
-        var actualJobCounter = await GetJobCounterOnPage(searchLink, cancellationToken);
+
+        await LoadAndParseHtml(searchLink, cancellationToken);
+        var actualJobCounter = _htmlExtractController.GetStringifiedData(_jobCounter);
 
         for (int currentPageNumber = 1; currentPageNumber <= maxPages; currentPageNumber++)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            List<string>? jobLinkListOnCurrentPage;
+            List<string?>? jobLinkListOnCurrentPage;
             string? jobCounterOnPage;
             try
             {
                 var currentPageUrl = BuildUrlWithPage(searchLink, currentPageNumber);
-                jobLinkListOnCurrentPage = await GetJobLinkListOnPage(currentPageUrl, cancellationToken);
-                jobCounterOnPage = await GetJobCounterOnPage(currentPageUrl, cancellationToken);
+                await LoadAndParseHtml(currentPageUrl, cancellationToken);
+
+                jobLinkListOnCurrentPage = _htmlExtractController.GetJobLinks(_jobUrlField);
+                jobCounterOnPage = _htmlExtractController.GetStringifiedData(_jobCounter);
             }
             catch (HtmlPageLoadingException ex)
             {
@@ -76,42 +81,10 @@ public class DjinniJobLinkParser
         return parsedJobLinkList;
     }
 
-    public async Task<string?> GetJobCounterOnPage(string searchLink, CancellationToken cancellationToken)
+    private async Task LoadAndParseHtml(string url, CancellationToken cancellationToken)
     {
-        var html = await _httpContentLoader.GetHtmlAsync(searchLink, cancellationToken);
-        var angleDocument = _htmlParser.ParseDocument(html);
-
-        if (!_jobLinkSelector.TryGetValue("JobCounter", out var linkRule))
-        {
-            throw new JobParsingException(searchLink, "Parsing rule for 'JobLink' is not configured in the dictionary!");
-        }
-
-        var counter = angleDocument.QuerySelector(linkRule.Selector);
-
-        return linkRule.Strategy.RetrieveData(counter);
-    }
-
-    private async Task<List<string>?> GetJobLinkListOnPage(string searchLink, CancellationToken cancellationToken)
-    {
-        var htmlPage = await _httpContentLoader.GetHtmlAsync(searchLink, cancellationToken);
-
-        var htmlDocumentObject = _htmlParser.ParseDocument(htmlPage);
-
-        if (!_jobLinkSelector.TryGetValue("JobLink", out var linkRule))
-        {
-            throw new JobParsingException(searchLink, "Parsing rule for 'JobLink' is not configured in the dictionary!");
-        }
-
-        var htmlJobLinksOnPage = htmlDocumentObject.QuerySelectorAll(linkRule.Selector);
-
-        if (htmlJobLinksOnPage.Length == 0)
-        {
-            return null;
-        }
-
-        var jobLinks = linkRule.Strategy.RetrieveData(htmlJobLinksOnPage);
-
-        return jobLinks.Where(link => link is not null).Select(link => link!).ToList();
+        var html = await _httpContentLoader.GetHtmlAsync(url, cancellationToken);
+        _htmlExtractController.ParseDocument(html);
     }
 
     private string BuildUrlWithPage(string baseSearchLink, int pageNumber)

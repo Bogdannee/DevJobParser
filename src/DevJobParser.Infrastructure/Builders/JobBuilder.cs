@@ -22,16 +22,16 @@ public class JobCardBuilder
                 _jobCard.Url = value;
                 break;
             case JobFieldName.Title:
-                _jobCard.Url = value;
+                _jobCard.Title = value;
                 break;
             case JobFieldName.Salary:
-                _jobCard.Url = value;
+                _jobCard.Salary = value;
                 break;
             case JobFieldName.Company:
-                _jobCard.Url = value;
+                _jobCard.Company = value;
                 break;
             case JobFieldName.Description:
-                _jobCard.Url = value;
+                _jobCard.Description = value;
                 break;
         }
     }

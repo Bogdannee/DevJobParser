@@ -19,7 +19,7 @@ namespace DevJobParser.Parsers.WorkUa.DetailsParser
         private readonly JobCardBuilder _jobCardBuilder;
 
         public WorkUaJobDetailsParser(
-            HttpContentLoader httpContentLoader,
+            IHttpContentLoader httpContentLoader,
             ILogger<WorkUaJobDetailsParser> logger,
             HtmlExtractController htmlExtractController,
             JobCardBuilder jobCardBuilder)
@@ -109,6 +109,8 @@ namespace DevJobParser.Parsers.WorkUa.DetailsParser
                     _htmlExtractController.ParseDocument(htmlPage);
 
                     // Main fields
+                    parsedMainFields.Add(JobFieldName.Url, parsedJobLink);
+
                     foreach (var field in _jobDetailSelectors)
                     {
                         var htmlField = field as HtmlField;
@@ -131,26 +133,6 @@ namespace DevJobParser.Parsers.WorkUa.DetailsParser
                             additionalDetails.Add(additionalField.AdditionalDetailName, parsedField);
                         }
                     }
-                    // if (jobTitle is null || jobCompanyName is null || jobDescription is null)
-                    // {
-                    //     throw new JobParsingException(parsedJobLink, "One of a main fields is null.");
-                    // }
-
-                    // Additional fields
-                    // string? jobPlaceOfWork = GetDataFromHtmlTag(angleHtmlDocument, _jobDetailSelectors["jobPlaceOfWork"]);
-                    // string? jobTermsAndConditions = GetDataFromHtmlTag(angleHtmlDocument, _jobDetailSelectors["jobTermsAndConditions"]);
-                    // string? jobLanguageKnowladge = GetDataFromHtmlTag(angleHtmlDocument, _jobDetailSelectors["jobLanguageKnowladge"]);
-
-                    // List<string?>? jobTagsOfSkillsCollection = GetDataFromHtmlTags(angleHtmlDocument, _jobDetailSelectors["jobTagsOfSkillsCollection"]);
-                    // string? jobTagsOfSkills = GetStringFromTextList(jobTagsOfSkillsCollection);
-
-                    // var additionalDetails = new Dictionary<string, string?>()
-                    // {
-                    //     { "placeOfWork", jobPlaceOfWork },
-                    //     { "termsAndConditions", jobTermsAndConditions },
-                    //     { "languageKnowladge", jobLanguageKnowladge },
-                    //     { "tagsOfSkills", jobTagsOfSkills }
-                    // };
 
                     foreach (var parsedField in parsedMainFields)
                     {

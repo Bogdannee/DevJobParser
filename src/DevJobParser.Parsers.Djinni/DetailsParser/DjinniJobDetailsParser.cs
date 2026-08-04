@@ -5,65 +5,65 @@ using DevJobParser.Infrastructure.Loading;
 using DevJobParser.Infrastructure.HtmlExtractors;
 using AngleSharp.Html.Parser;
 using AngleSharp.Html.Dom;
+using DevJobParser.Infrastructure.Fields;
+using DevJobParser.Infrastructure.Fields.Enums;
+using DevJobParser.Infrastructure.Builders;
 
 namespace DevJobParser.Parsers.Djinni.DetailsParser;
 
 public class DjinniJobDetailsParser
 {
     private readonly ILogger<DjinniJobDetailsParser> _logger;
-    private readonly Dictionary<string, ParsingRule> _jobDetailSelectors;
+    private readonly List<AbstractHtmlField> _jobDetailSelectors;
     private readonly SemaphoreSlim _throttler;
     private readonly IHttpContentLoader _httpContentLoader;
-    private readonly HtmlParser _htmlParser;
+    private readonly HtmlExtractController _htmlExtractController;
+    private readonly JobCardBuilder _jobCardBuilder;
 
-    public DjinniJobDetailsParser(IHttpContentLoader httpContentLoader, ILogger<DjinniJobDetailsParser> logger, HtmlParser htmlParser)
+    public DjinniJobDetailsParser(
+        IHttpContentLoader httpContentLoader,
+        ILogger<DjinniJobDetailsParser> logger,
+        HtmlExtractController htmlExtractController,
+        JobCardBuilder jobCardBuilder)
     {
         _httpContentLoader = httpContentLoader;
         _logger = logger;
-        _htmlParser = htmlParser;
+        _htmlExtractController = htmlExtractController;
+        _jobCardBuilder = jobCardBuilder;
         _throttler = new SemaphoreSlim(initialCount: 5);
 
-        _jobDetailSelectors = new Dictionary<string, ParsingRule>()
+        _jobDetailSelectors = new List<AbstractHtmlField>()
         {
+            new HtmlField(JobFieldName.Title)
             {
-                "jobTitle",
-                new ParsingRule
-                {
-                    Selector = "div.job-post-page h1",
-                    Strategy = new HtmlTextExtractor()
-                }
+                Selector = "div.job-post-page h1",
+                Strategy = new HtmlTextExtractor(),
+                Quantity = ValueQuantity.Single
             },
+            new HtmlField(JobFieldName.Company)
             {
-                "jobCompanyName",
-                new ParsingRule
-                {
-                    Selector = "div.job-post-page h1 + div > div > a",
-                    Strategy = new HtmlTextExtractor()
-                }
+                Selector = "div.job-post-page h1 + div > div > a",
+                Strategy = new HtmlTextExtractor(),
+                Quantity = ValueQuantity.Single
             },
+            new HtmlField(JobFieldName.Salary)
             {
-                "jobSalary",
-                new ParsingRule
-                {
-                    Selector = "div.job-post-page > header div.col-auto span",
-                    Strategy = new HtmlTextExtractor()
-                }
+                Selector = "div.job-post-page > header div.col-auto span",
+                Strategy = new HtmlTextExtractor(),
+                Quantity = ValueQuantity.Single
             },
+            new HtmlField(JobFieldName.Description)
             {
-                "jobDescription",
-                new ParsingRule
-                {
-                    Selector = "div.page-content div.job-post__description",
-                    Strategy = new HtmlTextExtractor()
-                }
+                Selector = "div.page-content div.job-post__description",
+                Strategy = new HtmlTextExtractor(),
+                Quantity = ValueQuantity.Single
             },
+            new HtmlAdditionalField()
             {
-                "jobTermsAndConditions",
-                new ParsingRule
-                {
-                    Selector = "div.job-post-page aside > div.card.card-body ul > li",
-                    Strategy = new HtmlTextExtractor()
-                }
+                AdditionalDetailName = "Terms And Conditions",
+                Selector = "div.job-post-page aside > div.card.card-body ul > li",
+                Strategy = new HtmlTextExtractor(),
+                Quantity = ValueQuantity.Multiply
             },
         };
     }
@@ -82,99 +82,73 @@ public class DjinniJobDetailsParser
 
             try
             {
-            string htmlPage = await _httpContentLoader.GetHtmlAsync(parsedJobLink, cancellationToken);
+                var parsedMainFields = new Dictionary<JobFieldName, string?>();  
+                var additionalDetails = new Dictionary<string, string?>();
 
-            var angleHtmlDocument = _htmlParser.ParseDocument(htmlPage);
+                string htmlPage = await _httpContentLoader.GetHtmlAsync(parsedJobLink, cancellationToken);
 
-            // Main fields
-            string? jobTitle = GetDataFromHtmlTag(angleHtmlDocument, _jobDetailSelectors["jobTitle"]);
-            string? jobCompanyName = GetDataFromHtmlTag(angleHtmlDocument, _jobDetailSelectors["jobCompanyName"]);
-            string? jobSalary = GetDataFromHtmlTag(angleHtmlDocument, _jobDetailSelectors["jobSalary"]);
-            string? jobDescription = GetDataFromHtmlTag(angleHtmlDocument, _jobDetailSelectors["jobDescription"]);
+                _htmlExtractController.ParseDocument(htmlPage);
 
-            if (jobTitle is null || jobCompanyName is null || jobDescription is null)
-            {
-                throw new JobParsingException(parsedJobLink, "One of a main fields is null.");
+                // Main fields
+                parsedMainFields.Add(JobFieldName.Url, parsedJobLink);
+                
+                foreach (var field in _jobDetailSelectors)
+                {
+                    var htmlField = field as HtmlField;
+
+                    if (htmlField != null)
+                    {
+                        string? parsedField = _htmlExtractController.GetStringifiedData(htmlField);
+                        parsedMainFields.Add(htmlField.Name, parsedField);
+                    }
+                }
+                
+                // Additional fields
+                foreach (var field in _jobDetailSelectors)
+                {
+                    var additionalField = field as HtmlAdditionalField;
+
+                    if (additionalField != null)
+                    {
+                        string? parsedField = _htmlExtractController.GetStringifiedData(additionalField);
+                        additionalDetails.Add(additionalField.AdditionalDetailName, parsedField);
+                    }
+                }
+
+                foreach (var parsedField in parsedMainFields)
+                {
+                    _jobCardBuilder.AddField(parsedField.Key, parsedField.Value);
+                }
+
+                _jobCardBuilder.AddAdditionalField(additionalDetails);
+
+                return _jobCardBuilder.GetJobCard();    
+
             }
-
-            // Additional fields
-            List<string?>? jobTermsAndConditionsList = GetDataFromHtmlTags(angleHtmlDocument, _jobDetailSelectors["jobTermsAndConditions"]);
-            string? jobTermsAndConditions = GetStringFromTextList(jobTermsAndConditionsList);
-
-            var additionalDetails = new Dictionary<string, string?>()
+            catch(HtmlPageLoadingException ex)
             {
-                { "termsAndConditions", jobTermsAndConditions },
-            };
-
-            return new JobCard()
+                _logger.LogError(ex, "Failed to retrieve or parse job details after several retries: {ParsedJobLink}", parsedJobLink);
+                return null;
+            }
+            catch (JobParsingException ex)
             {
-                Url = parsedJobLink,
-                Title = jobTitle,
-                Company = jobCompanyName,
-                Salary = jobSalary,
-                Description = jobDescription,
-                AdditionalDetails = additionalDetails,
-            };
-
-        }
-        catch(HtmlPageLoadingException ex)
-        {
-            _logger.LogError(ex, "Failed to retrieve or parse job details after several retries: {ParsedJobLink}", parsedJobLink);
-            return null;
-        }
-        catch (JobParsingException ex)
-        {
-            _logger.LogWarning(ex, "A vacancy with incomplete data was missed: {ParsedJobLink}", parsedJobLink);
-            return null;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while parsing job details for link: {ParsedJobLink}", parsedJobLink);
-            return null;
-        }
-        finally
-        {
-            _throttler.Release();
-        }
+                _logger.LogWarning(ex, "A vacancy with incomplete data was missed: {ParsedJobLink}", parsedJobLink);
+                return null;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while parsing job details for link: {ParsedJobLink}", parsedJobLink);
+                return null;
+            }
+            finally
+            {
+                _throttler.Release();
+            }
 
         }).ToList();
 
         var jobCards = await Task.WhenAll(parsingTasks);
 
         return jobCards.Where(card => card != null).ToList();
-    }
-
-    private string? GetDataFromHtmlTag(IHtmlDocument angleHtmlDocument, ParsingRule parsingRule)
-    {
-        var htmlElement = angleHtmlDocument?.QuerySelector(parsingRule.Selector);
-
-        if (htmlElement is null)
-            return null;
-
-        var data = parsingRule.Strategy.RetrieveData(htmlElement);
-
-        return data;
-    }
-
-    private List<string?>? GetDataFromHtmlTags(IHtmlDocument angleHtmlDocument, ParsingRule parsingRule)
-    {
-        var htmlElementCollection = angleHtmlDocument?.QuerySelectorAll(parsingRule.Selector);
-
-        if (htmlElementCollection is null)
-            return null;
-
-        var dataList = parsingRule.Strategy.RetrieveData(htmlElementCollection);
-
-        return dataList;
-    }
-
-    private string? GetStringFromTextList(List<string?>? textCollection)
-    {
-        if (textCollection is null || textCollection.Count == 0 )
-        {
-            return null;
-        }
-
-        return string.Join(", ",textCollection);
     }
 }

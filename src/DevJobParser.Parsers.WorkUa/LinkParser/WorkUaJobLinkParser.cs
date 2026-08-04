@@ -22,9 +22,8 @@ namespace DevJobParser.Parsers.WorkUa.LinkParser
             _logger = logger;
             _httpContentLoader = httpContentLoader;
             _htmlExtractController = htmlExtractController;
-            _jobUrlField = new HtmlField()
+            _jobUrlField = new HtmlField(JobFieldName.Url)
             {
-                Name = JobFieldName.Url,
                 Selector = "div#pjax-jobs-list > div.card h2 > a",
                 Strategy = new HtmlTagAttributeExtractor(attributeName:"href", prefix:"https://www.work.ua"),
                 Quantity = ValueQuantity.Single
@@ -71,7 +70,10 @@ namespace DevJobParser.Parsers.WorkUa.LinkParser
             var htmlPage = await _httpContentLoader.GetHtmlAsync(searchLink, cancellationToken);
 
             _htmlExtractController.ParseDocument(htmlPage);
-            var jobLinks = _htmlExtractController.GetListElements(_jobUrlField);
+            var jobLinks = _htmlExtractController.GetJobLinks(_jobUrlField);
+
+            if (jobLinks is null || jobLinks.Count == 0)
+                return null;
 
             return jobLinks.Where(link => link is not null).Select(link => link!).ToList();
         }

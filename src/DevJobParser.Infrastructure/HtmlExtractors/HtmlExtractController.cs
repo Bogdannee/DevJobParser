@@ -48,7 +48,7 @@ namespace DevJobParser.Infrastructure.HtmlExtractors
             return data;
         }
 
-        public List<string?>? GetListElements(AbstractHtmlField htmlField)
+        private List<string?>? GetListElements(AbstractHtmlField htmlField)
         {
             var htmlElementCollection = _htmlDocument?.QuerySelectorAll(htmlField.Selector);
 
@@ -58,6 +58,11 @@ namespace DevJobParser.Infrastructure.HtmlExtractors
             var dataList = htmlField.Strategy.RetrieveData(htmlElementCollection);
 
             return dataList;
+        }
+
+        public List<string?>? GetJobLinks(AbstractHtmlField htmlField)
+        {
+            return GetListElements(htmlField);
         }
 
         private string? GetStringifiedList(List<string?>? textCollection)
