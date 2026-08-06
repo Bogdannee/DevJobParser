@@ -117,7 +117,7 @@ namespace DevJobParser.Parsers.WorkUa.DetailsParser
 
                         if (htmlField != null)
                         {
-                            string? parsedField = _htmlExtractController.GetStringifiedData(htmlField);
+                            string? parsedField = _htmlExtractController.GetStringifiedField(htmlField);
                             parsedMainFields.Add(htmlField.Name, parsedField);
                         }
                     }
@@ -129,7 +129,7 @@ namespace DevJobParser.Parsers.WorkUa.DetailsParser
 
                         if (additionalField != null)
                         {
-                            string? parsedField = _htmlExtractController.GetStringifiedData(additionalField);
+                            string? parsedField = _htmlExtractController.GetStringifiedField(additionalField);
                             additionalDetails.Add(additionalField.AdditionalDetailName, parsedField);
                         }
                     }

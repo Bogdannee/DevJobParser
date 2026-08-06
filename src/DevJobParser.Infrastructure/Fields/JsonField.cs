@@ -2,8 +2,8 @@ using DevJobParser.Infrastructure.Fields.Enums;
 
 namespace DevJobParser.Infrastructure.Fields
 {
-    public class JsonField : AbstractField
+    public class JsonField(JobFieldName name) : AbstractField
     {
-        public override JobFieldName Name => throw new NotImplementedException();
+        public override JobFieldName Name { get; } = name;
     }
 }

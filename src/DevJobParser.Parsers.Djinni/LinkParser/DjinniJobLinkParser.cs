@@ -45,7 +45,7 @@ public class DjinniJobLinkParser
         var parsedJobLinkList = new List<string>();
 
         await LoadAndParseHtml(searchLink, cancellationToken);
-        var actualJobCounter = _htmlExtractController.GetStringifiedData(_jobCounter);
+        var actualJobCounter = _htmlExtractController.GetStringifiedField(_jobCounter);
 
         for (int currentPageNumber = 1; currentPageNumber <= maxPages; currentPageNumber++)
         {
@@ -58,7 +58,7 @@ public class DjinniJobLinkParser
                 await LoadAndParseHtml(currentPageUrl, cancellationToken);
 
                 jobLinkListOnCurrentPage = _htmlExtractController.GetJobLinks(_jobUrlField);
-                jobCounterOnPage = _htmlExtractController.GetStringifiedData(_jobCounter);
+                jobCounterOnPage = _htmlExtractController.GetStringifiedField(_jobCounter);
             }
             catch (HtmlPageLoadingException ex)
             {

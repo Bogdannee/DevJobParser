@@ -236,7 +236,7 @@ namespace ConsoleApp2
             return new List<Dictionary<string, string>>();
         }
 
-        public static async Task<string> GetJob(string jobId = "7933293")
+        public static async Task<string> GetJob(string jobId)
         {
             using var httpClient = new HttpClient();
 

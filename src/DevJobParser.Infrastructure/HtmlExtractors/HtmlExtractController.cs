@@ -20,7 +20,7 @@ namespace DevJobParser.Infrastructure.HtmlExtractors
             _htmlDocument = _htmlParser.ParseDocument(htmlPage);
         }
 
-        public string? GetStringifiedData(AbstractHtmlField htmlField)
+        public string? GetStringifiedField(AbstractHtmlField htmlField)
         {
             string? result;
 
